@@ -88,17 +88,13 @@ php artisan db:generate-models
 
 | Flag           | Description                  | Example                                |
 | -------------- | ---------------------------- | -------------------------------------- |
-| `--connection` | Use a specific DB connection | `--connection=pgsql`                   |
-| `--path`       | Override output directory    | `--path=app/Models/Generated`          |
-| `--namespace`  | Override generated namespace | `--namespace="App\\Models\\Generated"` |
 | `--force`      | Overwrite existing models    | `--force`                              |
-| `--relations`  | Auto-detect relationships    | `--relations`                          |
-| `--timestamps` | Include timestamp properties | `--timestamps`                         |
+
 
 Example usage:
 
 ```bash
-php artisan db:generate-models --connection=mysql --path=app/Models/Auto --relations --force
+php artisan db:generate-models  --force
 ```
 
 ---
@@ -108,9 +104,9 @@ php artisan db:generate-models --connection=mysql --path=app/Models/Auto --relat
 After running the command, your models are automatically generated in the configured directory:
 
 ```
-app/Models/Auto/User.php
-app/Models/Auto/Order.php
-app/Models/Auto/Product.php
+app/Models/User.php
+app/Models/Order.php
+app/Models/Product.php
 ```
 
 Each model includes:
@@ -126,7 +122,7 @@ Each model includes:
 ```php
 <?php
 
-namespace App\Models\Auto;
+namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
@@ -152,22 +148,6 @@ class Orders extends Model
 
 ---
 
-## 🧪 Running Tests
-
-Run the test suite to validate functionality:
-
-```bash
-composer test
-```
-
-or directly via PHPUnit:
-
-```bash
-vendor/bin/phpunit
-```
-
----
-
 ## 🧰 Development
 
 If you want to contribute or customize:
@@ -176,7 +156,7 @@ If you want to contribute or customize:
 git clone https://github.com/zuqongtech/laravel-db-introspection.git
 cd laravel-db-introspection
 composer install
-composer test
+
 ```
 
 Submit a pull request with well-documented commits and test coverage.
@@ -194,20 +174,20 @@ Submit a pull request with well-documented commits and test coverage.
 ## 🪄 Credits
 
 Developed and maintained by **Zuqongtech**
-© 2025 Zuqongtech. All rights reserved.
+© 2025 Gideon Zozingao. All rights reserved.
 
 ---
 
 ## 🤝 Contributing & Bug Reports
 
-We welcome all contributions from the Laravel community! 💪
+I welcome all contributions from the Laravel community! 💪
 
 If you discover a bug, want to request a feature, or improve performance:
 
 1. Open an [issue](https://github.com/gideonzozingao/laravel-db-introspection/issues) describing the problem.
 2. Submit a pull request with tests where possible.
 
-Every contribution helps make **Laravel DB Introspection** more reliable and developer-friendly — empowering teams working with **large-scale databases** to move faster and smarter. ✨
+Every contribution helps make **Zuqongtech\LaravelDbIntrospection** more reliable and developer-friendly — empowering teams working with **large-scale databases** to move faster and smarter. ✨
 
 👉 **GitHub:** [github.com/gideonzozingao/laravel-db-introspection](https://github.com/gideonzozingao/laravel-db-introspection)
 
