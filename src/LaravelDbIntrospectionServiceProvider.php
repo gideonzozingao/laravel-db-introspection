@@ -1,6 +1,6 @@
 <?php
 
-namespace Zuqongtech\LaravelDbIntrospection;
+namespace GideonZozingao\LaravelDbIntrospection;
 
 use App\Console\Commands\GenerateModelsFromDatabase;
 use Illuminate\Support\ServiceProvider;

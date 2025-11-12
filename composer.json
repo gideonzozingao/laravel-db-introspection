@@ -1,12 +1,12 @@
 {
-    "name": "zuqongtech/laravel-db-introspection",
+    "name": "gideonzozingao/laravel-db-introspection",
     "description": "A Laravel package for automatic database introspection and model generation supporting MySQL, PostgreSQL, SQL Server, and more.",
     "type": "library",
     "license": "MIT",
     "authors": [
         {
-            "name": "Zuqongtech",
-            "email": "support@zuqongtech.com"
+            "name": "Gideon Zozingao",
+            "email": "gideonzozingao@gmail.com"
         }
     ],
     "require": {
@@ -27,13 +27,13 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Zuqongtech\\LaravelDbIntrospection\\Tests\\": "tests/"
+            "GideonZozingao\\LaravelDbIntrospection\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Zuqongtech\\LaravelDbIntrospection\\LaravelDbIntrospectionServiceProvider"
+                "GideonZozingao\\LaravelDbIntrospection\\LaravelDbIntrospectionServiceProvider"
             ]
         }
     },
