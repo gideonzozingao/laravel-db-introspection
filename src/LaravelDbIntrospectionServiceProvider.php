@@ -1,10 +1,10 @@
 <?php
 
-namespace GideonZozingao\LaravelDbIntrospection;
+namespace Zuqongtech\LaravelDbIntrospection;
 
-use App\Console\Commands\GenerateModelsFromDatabase;
+
 use Illuminate\Support\ServiceProvider;
-
+use Zuqongtech\LaravelDbIntrospection\Console\GenerateModelsFromDatabase;
 
 class LaravelDbIntrospectionServiceProvider extends ServiceProvider
 {
