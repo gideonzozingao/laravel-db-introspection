@@ -7,8 +7,8 @@ You can copy-paste this directly into your repository root as `README.md` ⬇️
 # 📦 Laravel DB Introspection
 
 [![Packagist Version](https://img.shields.io/packagist/v/zuqongtech/laravel-db-introspection.svg?style=for-the-badge)](https://packagist.org/packages/zuqongtech/laravel-db-introspection)
-[![License](https://img.shields.io/github/license/zuqongtech/laravel-db-introspection.svg?style=for-the-badge)](LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/zuqongtech/laravel-db-introspection/tests.yml?style=for-the-badge)](https://github.com/zuqongtech/laravel-db-introspection/actions)
+[![License](https://img.shields.io/github/license/gideonzozingao/laravel-db-introspection.svg?style=for-the-badge)](LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/zuqongtech/laravel-db-introspection/tests.yml?style=for-the-badge)](https://github.com/gideonzozingao/laravel-db-introspection/actions)
 [![Laravel](https://img.shields.io/badge/Laravel-10.x%20%7C%2011.x-FF2D20?style=for-the-badge\&logo=laravel)](https://laravel.com)
 [![PHP](https://img.shields.io/badge/PHP-%5E8.2-blue?style=for-the-badge\&logo=php)](https://www.php.net)
 
