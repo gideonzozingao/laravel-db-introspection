@@ -3,569 +3,288 @@
 namespace Zuqongtech\LaravelDbIntrospection\Console;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Filesystem\Filesystem;
-use Illuminate\Support\Str;
+use Zuqongtech\LaravelDbIntrospection\Support\DatabaseInspector;
+use Zuqongtech\LaravelDbIntrospection\Support\RelationshipDetector;
+use Zuqongtech\LaravelDbIntrospection\Support\ModelBuilder;
+use Zuqongtech\LaravelDbIntrospection\Support\FileWriter;
+use Zuqongtech\LaravelDbIntrospection\Support\Helpers;
 
 class GenerateModelsFromDatabase extends Command
 {
-    protected $signature = 'db:generate-models
+    protected $signature = 'introspection:generate-models
                             {--namespace=App\\Models : Namespace for generated models}
                             {--connection= : Database connection name (optional)}
                             {--tables=* : Specific tables to generate (optional)}
+                            {--ignore=* : Tables to ignore}
+                            {--path=app : Base path for generated models}
                             {--force : Overwrite existing models}
+                            {--backup : Backup existing models before overwriting}
+                            {--dry-run : Preview changes without writing files}
                             {--with-phpdoc : Add PHPDoc blocks for IDE support}
-                            {--with-inverse : Generate inverse relationships (hasMany, hasOne)}';
+                            {--with-inverse : Generate inverse relationships (hasMany, hasOne)}
+                            {--validate-fk : Validate foreign key references}';
 
-    protected $description = 'Introspect any supported database (MySQL, PostgreSQL, SQL Server, SQLite) and generate Eloquent models automatically.';
+    protected $description = 'Introspect database and generate Eloquent models with relationships';
 
-    protected Filesystem $files;
-    protected string $connectionName;
-    protected $connection;
-    protected string $driver;
-    protected array $allTables = [];
-    protected array $allForeignKeys = [];
-
-    public function __construct()
-    {
-        parent::__construct();
-        $this->files = new Filesystem;
-    }
+    protected DatabaseInspector $inspector;
+    protected RelationshipDetector $relationshipDetector;
+    protected FileWriter $fileWriter;
 
     public function handle(): int
     {
-        $this->connectionName = $this->option('connection') ?: config('database.default');
-        $this->connection = DB::connection($this->connectionName);
-        $this->driver = $this->connection->getDriverName();
-        $database = $this->connection->getDatabaseName();
+        // Initialize components
+        $connectionName = $this->option('connection') ?: config('database.default');
+        $this->inspector = new DatabaseInspector($connectionName);
+        $this->relationshipDetector = new RelationshipDetector($this->inspector);
+        
+        $namespace = $this->option('namespace');
+        $basePath = $this->option('path');
+        $dryRun = $this->option('dry-run');
+        
+        $this->fileWriter = new FileWriter(base_path(), $dryRun);
 
-        $this->info("🔍 Inspecting connection [{$this->connectionName}] using driver [{$this->driver}] on database [{$database}]...");
-
-        $this->allTables = $this->getAllTables();
-
-        // Filter tables if specific ones are requested
-        $requestedTables = $this->option('tables');
-        if (!empty($requestedTables)) {
-            $tablesToProcess = array_intersect($this->allTables, $requestedTables);
-            if (empty($tablesToProcess)) {
-                $this->error('❌ No matching tables found.');
-                return 1;
-            }
-        } else {
-            $tablesToProcess = $this->allTables;
+        // Display connection info
+        $driver = $this->inspector->getDriver();
+        $database = $this->inspector->getDatabaseName();
+        
+        $this->info("🔍 Inspecting connection [{$connectionName}] using driver [{$driver}] on database [{$database}]...");
+        
+        if ($dryRun) {
+            $this->warn("🔸 DRY RUN MODE - No files will be written");
         }
 
+        // Get all tables
+        $allTables = $this->inspector->getAllTables();
+        
+        // Apply filters
+        $ignoreTables = array_merge(
+            config('db-introspection.ignore_tables', []),
+            $this->option('ignore')
+        );
+        
+        $requestedTables = $this->option('tables');
+        
+        $tablesToProcess = $this->filterTables($allTables, $requestedTables, $ignoreTables);
+
         if (empty($tablesToProcess)) {
-            $this->warn('⚠️  No tables found in the database.');
+            $this->warn('⚠️  No tables found to process.');
             return 0;
         }
 
-        // Pre-load all foreign keys if inverse relationships are requested
+        $this->info("📊 Found " . count($tablesToProcess) . " table(s) to process.\n");
+
+        // Build foreign key map for relationship detection
         if ($this->option('with-inverse')) {
-            $this->info("📊 Loading foreign key relationships...");
-            foreach ($this->allTables as $table) {
-                $this->allForeignKeys[$table] = $this->getForeignKeys($table);
+            $this->info("🔗 Building relationship map...");
+            $this->relationshipDetector->buildForeignKeyMap($allTables);
+            
+            // Validate foreign keys if requested
+            if ($this->option('validate-fk')) {
+                $this->validateForeignKeys();
             }
         }
 
-        $this->info("Found " . count($tablesToProcess) . " table(s) to process.\n");
+        // Generate models
+        $results = [];
+        $progressBar = $this->output->createProgressBar(count($tablesToProcess));
+        $progressBar->start();
 
         foreach ($tablesToProcess as $table) {
             try {
-                $this->generateModel($table);
+                $result = $this->generateModel($table, $namespace, $basePath);
+                $results[] = $result;
+                $progressBar->advance();
             } catch (\Exception $e) {
-                $this->error("❌ Failed to generate model for table '{$table}': {$e->getMessage()}");
+                $this->error("\n❌ Failed to generate model for table '{$table}': {$e->getMessage()}");
             }
         }
 
-        $this->info("\n✅ All models have been generated successfully!");
+        $progressBar->finish();
+        $this->newLine(2);
+
+        // Display summary
+        $this->displaySummary($results);
+
         return 0;
     }
 
-    protected function getAllTables(): array
+    protected function filterTables(array $allTables, array $requestedTables, array $ignoreTables): array
     {
-        $tables = match ($this->driver) {
-            'mysql' => collect($this->connection->select('SHOW TABLES'))
-                ->map(fn($t) => array_values((array)$t)[0])
-                ->toArray(),
+        // Filter by requested tables
+        if (!empty($requestedTables)) {
+            $allTables = array_intersect($allTables, $requestedTables);
+        }
 
-            'pgsql' => collect($this->connection->select("SELECT tablename FROM pg_tables WHERE schemaname='public'"))
-                ->pluck('tablename')
-                ->toArray(),
+        // Remove ignored tables
+        $filtered = array_filter($allTables, function ($table) use ($ignoreTables) {
+            return !Helpers::shouldIgnoreTable($table, $ignoreTables);
+        });
 
-            'sqlite' => collect($this->connection->select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"))
-                ->pluck('name')
-                ->toArray(),
-
-            'sqlsrv' => collect($this->connection->select("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE'"))
-                ->pluck('TABLE_NAME')
-                ->toArray(),
-
-            default => throw new \Exception("Unsupported database driver: {$this->driver}")
-        };
-
-        // Filter out Laravel migration tables
-        return array_values(array_filter($tables, fn($table) => !in_array($table, [
-            'migrations',
-            'password_resets',
-            'password_reset_tokens',
-            'failed_jobs',
-            'personal_access_tokens'
-        ])));
+        return array_values($filtered);
     }
 
-    protected function generateModel(string $table): void
+    protected function generateModel(string $table, string $namespace, string $basePath): array
     {
-        $modelName = Str::studly(Str::singular($table));
-
+        $modelName = Helpers::tableToModelName($table);
+        
         // Validate model name
-        if (!preg_match('/^[A-Z][a-zA-Z0-9]*$/', $modelName)) {
-            $this->warn("⚠️  Skipping table '{$table}': Invalid model name '{$modelName}'");
-            return;
+        if (!Helpers::isValidClassName($modelName)) {
+            throw new \Exception("Invalid model name: {$modelName}");
         }
 
-        $namespace = rtrim($this->option('namespace'), '\\');
-
-        // Fix: Properly convert namespace to path
-        // App\Models => Models
-        // App\Domain\Models => Domain/Models
-        $namespacePath = str_replace('\\', '/', $namespace);
-        $namespacePath = preg_replace('/^App\//i', '', $namespacePath);
-
-        $modelPath = app_path($namespacePath . '/' . $modelName . '.php');
-
-        if ($this->files->exists($modelPath) && !$this->option('force')) {
-            $this->warn("⚠️  Model {$modelName} already exists. Use --force to overwrite.");
-            return;
+        // Check if model exists
+        $modelExists = $this->fileWriter->modelExists($namespace, $modelName, $basePath);
+        
+        if ($modelExists && !$this->option('force') && !$this->option('dry-run')) {
+            $this->warn("⚠️  Skipping {$modelName}: already exists (use --force to overwrite)");
+            return [
+                'table' => $table,
+                'model' => $modelName,
+                'status' => 'skipped',
+                'reason' => 'already exists'
+            ];
         }
 
-        $columns = Schema::connection($this->connectionName)->getColumnListing($table);
-        $columnMeta = $this->getColumnMeta($table);
-        $primaryKey = $this->getPrimaryKey($table);
-        $foreignKeys = $this->getForeignKeys($table);
+        // Backup existing model if requested
+        if ($modelExists && $this->option('backup') && !$this->option('dry-run')) {
+            $backupPath = $this->fileWriter->backupModel($namespace, $modelName, $basePath);
+            if ($backupPath) {
+                $this->line("💾 Backed up to: {$backupPath}");
+            }
+        }
 
-        $fillable = $this->generateFillable($columns);
-        $hidden = $this->generateHidden($columns);
-        $casts = $this->generateCasts($columnMeta);
-        $hasTimestamps = $this->hasTimestamps($columns);
-        $usesSoftDeletes = in_array('deleted_at', $columns);
+        // Get table metadata
+        $columns = $this->inspector->getColumns($table);
+        $foreignKeys = $this->inspector->getForeignKeys($table);
+        $primaryKey = $this->inspector->getPrimaryKey($table);
+        $indexes = $this->inspector->getIndexes($table);
 
-        // Generate relationships
-        $belongsToRelations = $this->generateBelongsToRelations($foreignKeys);
-        $inverseRelations = $this->option('with-inverse') ? $this->generateInverseRelations($table) : '';
-        $relations = trim($belongsToRelations . "\n\n" . $inverseRelations);
+        // Detect timestamps and soft deletes
+        $columnNames = array_column($columns, 'name');
+        $hasTimestamps = in_array('created_at', $columnNames) && in_array('updated_at', $columnNames);
+        $hasSoftDeletes = in_array('deleted_at', $columnNames);
 
-        $phpDoc = $this->option('with-phpdoc') ? $this->generatePhpDoc($columnMeta, $foreignKeys, $table) : '';
+        // Build model using ModelBuilder
+        $builder = new ModelBuilder($table, $namespace);
+        $builder->setColumns($columns)
+                ->setForeignKeys($foreignKeys)
+                ->setPrimaryKey($primaryKey)
+                ->setTimestamps($hasTimestamps)
+                ->setSoftDeletes($hasSoftDeletes)
+                ->setWithPhpDoc($this->option('with-phpdoc'))
+                ->setWithInverse($this->option('with-inverse'));
 
-        $template = $this->generateModelTemplate(
+        // Add inverse relationships if enabled
+        if ($this->option('with-inverse')) {
+            $inverseRelations = $this->relationshipDetector->getInverseRelationships($table);
+            foreach ($inverseRelations as $relation) {
+                $builder->addInverseRelationship(
+                    $relation['method'],
+                    $relation['model'],
+                    $relation['foreign_key']
+                );
+            }
+        }
+
+        // Build model content
+        $modelContent = $builder->build();
+
+        // Write model to file
+        $writeResult = $this->fileWriter->writeModel(
+            $modelContent,
             $namespace,
             $modelName,
-            $table,
-            $primaryKey,
-            $fillable,
-            $hidden,
-            $casts,
-            $hasTimestamps,
-            $usesSoftDeletes,
-            $relations,
-            $phpDoc
+            $basePath
         );
 
-        // Ensure directory exists
-        $directory = dirname($modelPath);
-        if (!$this->files->isDirectory($directory)) {
-            $this->files->makeDirectory($directory, 0755, true);
-        }
-
-        $this->files->put($modelPath, $template);
-
-        $this->info("✅ Generated: {$modelName} → {$modelPath}");
+        return [
+            'table' => $table,
+            'model' => $modelName,
+            'status' => $writeResult['written'] ? 'success' : 'failed',
+            'path' => $writeResult['relative_path'],
+            'existed' => $writeResult['existed'],
+            'message' => $writeResult['message'],
+            'columns' => count($columns),
+            'relationships' => count($foreignKeys),
+            'inverse_relationships' => count($inverseRelations ?? []),
+        ];
     }
 
-    protected function getColumnMeta(string $table): array
+    protected function validateForeignKeys(): void
     {
-        return match ($this->driver) {
-            'mysql' => $this->connection->select("SHOW COLUMNS FROM `{$table}`"),
-
-            'pgsql' => $this->connection->select("
-                SELECT column_name, data_type, is_nullable, column_default, udt_name
-                FROM information_schema.columns
-                WHERE table_name = ?
-                ORDER BY ordinal_position
-            ", [$table]),
-
-            'sqlite' => $this->connection->select("PRAGMA table_info(`{$table}`)"),
-
-            'sqlsrv' => $this->connection->select("
-                SELECT
-                    COLUMN_NAME as column_name,
-                    DATA_TYPE as data_type,
-                    IS_NULLABLE as is_nullable,
-                    COLUMN_DEFAULT as column_default
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = ?
-                ORDER BY ORDINAL_POSITION
-            ", [$table]),
-
-            default => [],
-        };
-    }
-
-    protected function getPrimaryKey(string $table): ?string
-    {
-        try {
-            $result = match ($this->driver) {
-                'mysql' => collect($this->connection->select("SHOW KEYS FROM `{$table}` WHERE Key_name = 'PRIMARY'"))
-                    ->pluck('Column_name')
-                    ->first(),
-
-                'pgsql' => $this->connection->selectOne("
-                    SELECT a.attname
-                    FROM pg_index i
-                    JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
-                    WHERE i.indrelid = ?::regclass AND i.indisprimary
-                ", [$table])->attname ?? null,
-
-                'sqlite' => collect($this->connection->select("PRAGMA table_info(`{$table}`)"))
-                    ->where('pk', 1)
-                    ->pluck('name')
-                    ->first(),
-
-                'sqlsrv' => $this->connection->selectOne("
-                    SELECT COLUMN_NAME
-                    FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-                    WHERE OBJECTPROPERTY(OBJECT_ID(CONSTRAINT_SCHEMA + '.' + CONSTRAINT_NAME), 'IsPrimaryKey') = 1
-                    AND TABLE_NAME = ?
-                ", [$table])->COLUMN_NAME ?? null,
-
-                default => null,
-            };
-
-            return $result;
-        } catch (\Exception $e) {
-            return null;
+        $issues = $this->relationshipDetector->validateForeignKeys();
+        
+        if (!empty($issues)) {
+            $this->warn("\n⚠️  Found " . count($issues) . " foreign key issue(s):");
+            
+            foreach ($issues as $issue) {
+                $this->line("   - {$issue['table']}.{$issue['column']}: {$issue['issue']}");
+            }
+            
+            $this->newLine();
+        } else {
+            $this->info("✅ All foreign key references are valid");
         }
     }
 
-    protected function getForeignKeys(string $table): array
+    protected function displaySummary(array $results): void
     {
-        $foreignKeys = match ($this->driver) {
-            'mysql' => $this->connection->select("
-                SELECT
-                    column_name,
-                    referenced_table_name,
-                    referenced_column_name
-                FROM information_schema.KEY_COLUMN_USAGE
-                WHERE TABLE_SCHEMA = DATABASE()
-                AND TABLE_NAME = ?
-                AND referenced_table_name IS NOT NULL
-            ", [$table]),
+        $successful = collect($results)->where('status', 'success')->count();
+        $skipped = collect($results)->where('status', 'skipped')->count();
+        $failed = collect($results)->where('status', 'failed')->count();
 
-            'pgsql' => $this->connection->select("
-                SELECT
-                    kcu.column_name,
-                    ccu.table_name AS referenced_table_name,
-                    ccu.column_name AS referenced_column_name
-                FROM
-                    information_schema.table_constraints AS tc
-                    JOIN information_schema.key_column_usage AS kcu
-                      ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
-                    JOIN information_schema.constraint_column_usage AS ccu
-                      ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema
-                WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_name = ?
-            ", [$table]),
+        $this->info("📊 Generation Summary:");
+        $this->info("   ✅ Successful: {$successful}");
+        
+        if ($skipped > 0) {
+            $this->info("   ⏭️  Skipped: {$skipped}");
+        }
+        
+        if ($failed > 0) {
+            $this->error("   ❌ Failed: {$failed}");
+        }
 
-            'sqlite' => collect($this->connection->select("PRAGMA foreign_key_list(`{$table}`)"))
-                ->map(fn($fk) => (object)[
-                    'column_name' => $fk->from,
-                    'referenced_table_name' => $fk->table,
-                    'referenced_column_name' => $fk->to,
+        // Display detailed results table
+        if ($successful > 0) {
+            $this->newLine();
+            $this->info("Generated Models:");
+            
+            $tableData = collect($results)
+                ->where('status', 'success')
+                ->map(fn($r) => [
+                    $r['model'],
+                    $r['table'],
+                    $r['columns'],
+                    $r['relationships'] + ($r['inverse_relationships'] ?? 0),
+                    $r['existed'] ? 'Overwritten' : 'Created'
                 ])
-                ->toArray(),
-
-            'sqlsrv' => $this->connection->select("
-                SELECT
-                    fkc.COLUMN_NAME AS column_name,
-                    pk.TABLE_NAME AS referenced_table_name,
-                    pkc.COLUMN_NAME AS referenced_column_name
-                FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS AS rc
-                JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS fk ON rc.CONSTRAINT_NAME = fk.CONSTRAINT_NAME
-                JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS pk ON rc.UNIQUE_CONSTRAINT_NAME = pk.CONSTRAINT_NAME
-                JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS fkc ON rc.CONSTRAINT_NAME = fkc.CONSTRAINT_NAME
-                JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS pkc ON pk.CONSTRAINT_NAME = pkc.CONSTRAINT_NAME
-                WHERE fk.TABLE_NAME = ?
-            ", [$table]),
-
-            default => [],
-        };
-
-        return is_array($foreignKeys) ? $foreignKeys : [];
-    }
-
-    protected function generateFillable(array $columns): array
-    {
-        return array_filter($columns, fn($col) => !in_array($col, ['id', 'created_at', 'updated_at', 'deleted_at']));
-    }
-
-    protected function generateHidden(array $columns): array
-    {
-        $sensitivePatterns = ['password', 'secret', 'token', 'api_key', 'remember_token'];
-
-        return array_filter($columns, function ($col) use ($sensitivePatterns) {
-            foreach ($sensitivePatterns as $pattern) {
-                if (str_contains(strtolower($col), $pattern)) {
-                    return true;
-                }
-            }
-            return false;
-        });
-    }
-
-    protected function hasTimestamps(array $columns): bool
-    {
-        return in_array('created_at', $columns) && in_array('updated_at', $columns);
-    }
-
-    protected function generateCasts(array $columns): array
-    {
-        $casts = [];
-
-        foreach ($columns as $col) {
-            $name = $col->Field ?? $col->column_name ?? $col->name ?? null;
-            $type = $col->Type ?? $col->data_type ?? $col->type ?? $col->udt_name ?? '';
-
-            if (!$name) continue;
-
-            // Skip timestamp columns (handled by Laravel)
-            if (in_array($name, ['created_at', 'updated_at', 'deleted_at', 'email_verified_at'])) {
-                continue;
-            }
-
-            $type = strtolower($type);
-
-            if (str_contains($type, 'json') || str_contains($type, 'jsonb')) {
-                $casts[$name] = 'array';
-            } elseif (str_contains($type, 'bool') || $type === 'tinyint(1)') {
-                $casts[$name] = 'boolean';
-            } elseif (str_contains($type, 'int')) {
-                $casts[$name] = 'integer';
-            } elseif (str_contains($type, 'decimal')) {
-                // Extract precision if available
-                preg_match('/decimal\((\d+),(\d+)\)/', $type, $matches);
-                $precision = $matches[2] ?? '2';
-                $casts[$name] = "decimal:{$precision}";
-            } elseif (in_array($type, ['float', 'double', 'real', 'numeric', 'money'])) {
-                $casts[$name] = 'decimal:2';
-            } elseif ($type === 'date') {
-                $casts[$name] = 'date';
-            } elseif (in_array($type, ['datetime', 'timestamp', 'timestamptz'])) {
-                $casts[$name] = 'datetime';
-            }
+                ->toArray();
+            
+            $this->table(
+                ['Model', 'Table', 'Columns', 'Relations', 'Status'],
+                $tableData
+            );
         }
 
-        return $casts;
-    }
-
-    protected function generateBelongsToRelations(array $foreignKeys): string
-    {
-        $relations = [];
-        $usedNames = [];
-
-        foreach ($foreignKeys as $fk) {
-            $column = $fk->column_name ?? $fk->from ?? null;
-            $relatedTable = $fk->referenced_table_name ?? $fk->table ?? null;
-
-            if (!$column || !$relatedTable) continue;
-
-            $relatedModel = Str::studly(Str::singular($relatedTable));
-            $methodName = Str::camel(str_replace('_id', '', $column));
-
-            // Handle name collisions
-            $originalMethodName = $methodName;
-            $counter = 1;
-            while (in_array($methodName, $usedNames)) {
-                $methodName = $originalMethodName . $counter;
-                $counter++;
-            }
-            $usedNames[] = $methodName;
-
-            $relations[] = <<<PHP
-    /**
-     * Get the {$relatedModel} that owns this record.
-     */
-    public function {$methodName}()
-    {
-        return \$this->belongsTo({$relatedModel}::class, '{$column}');
-    }
-PHP;
-        }
-
-        return implode("\n\n", $relations);
-    }
-
-    protected function generateInverseRelations(string $currentTable): string
-    {
-        $relations = [];
-        $usedNames = [];
-
-        // Find all tables that reference the current table
-        foreach ($this->allForeignKeys as $table => $foreignKeys) {
-            if ($table === $currentTable) continue;
-
-            foreach ($foreignKeys as $fk) {
-                $referencedTable = $fk->referenced_table_name ?? $fk->table ?? null;
-
-                if ($referencedTable === $currentTable) {
-                    $relatedModel = Str::studly(Str::singular($table));
-                    $methodName = Str::camel(Str::plural($table));
-
-                    // Handle name collisions
-                    $originalMethodName = $methodName;
-                    $counter = 1;
-                    while (in_array($methodName, $usedNames)) {
-                        $methodName = $originalMethodName . $counter;
-                        $counter++;
-                    }
-                    $usedNames[] = $methodName;
-
-                    $foreignKeyColumn = $fk->column_name ?? $fk->from ?? null;
-
-                    $relations[] = <<<PHP
-    /**
-     * Get all {$relatedModel} records for this record.
-     */
-    public function {$methodName}()
-    {
-        return \$this->hasMany({$relatedModel}::class, '{$foreignKeyColumn}');
-    }
-PHP;
-                }
-            }
-        }
-
-        return implode("\n\n", $relations);
-    }
-
-    protected function generatePhpDoc(array $columnMeta, array $foreignKeys, string $currentTable): string
-    {
-        $properties = [];
-
-        // Add column properties
-        foreach ($columnMeta as $col) {
-            $name = $col->Field ?? $col->column_name ?? $col->name ?? null;
-            $type = $col->Type ?? $col->data_type ?? $col->type ?? '';
-
-            if (!$name) continue;
-
-            $phpType = $this->mapTypeToPhp($type);
-            $nullable = ($col->Null ?? $col->is_nullable ?? 'NO') === 'YES' ? '|null' : '';
-            $properties[] = " * @property {$phpType}{$nullable} \${$name}";
-        }
-
-        // Add belongsTo relationship properties
-        foreach ($foreignKeys as $fk) {
-            $column = $fk->column_name ?? $fk->from ?? null;
-            $relatedTable = $fk->referenced_table_name ?? $fk->table ?? null;
-
-            if (!$column || !$relatedTable) continue;
-
-            $relatedModel = Str::studly(Str::singular($relatedTable));
-            $methodName = Str::camel(str_replace('_id', '', $column));
-            $properties[] = " * @property-read {$relatedModel}|null \${$methodName}";
-        }
-
-        // Add inverse relationship properties
+        // Show pivot table detection
         if ($this->option('with-inverse')) {
-            foreach ($this->allForeignKeys as $table => $fks) {
-                if ($table === $currentTable) continue;
-
-                foreach ($fks as $fk) {
-                    $referencedTable = $fk->referenced_table_name ?? $fk->table ?? null;
-
-                    if ($referencedTable === $currentTable) {
-                        $relatedModel = Str::studly(Str::singular($table));
-                        $methodName = Str::camel(Str::plural($table));
-                        $properties[] = " * @property-read \Illuminate\Database\Eloquent\Collection<{$relatedModel}> \${$methodName}";
-                    }
+            $pivotTables = $this->relationshipDetector->getPivotTables();
+            
+            if (!empty($pivotTables)) {
+                $this->newLine();
+                $this->info("🔄 Detected Pivot Tables:");
+                
+                foreach ($pivotTables as $pivot) {
+                    $this->line("   {$pivot['pivot_table']}: {$pivot['model1']} ↔ {$pivot['model2']}");
                 }
             }
         }
 
-        return "/**\n" . implode("\n", $properties) . "\n */";
-    }
-
-    protected function mapTypeToPhp(string $type): string
-    {
-        $type = strtolower($type);
-
-        if (str_contains($type, 'int')) return 'int';
-        if (str_contains($type, 'bool') || $type === 'tinyint(1)') return 'bool';
-        if (str_contains($type, 'float') || str_contains($type, 'double') || str_contains($type, 'decimal')) return 'float';
-        if (str_contains($type, 'json')) return 'array';
-        if (str_contains($type, 'date') || str_contains($type, 'time')) return '\Illuminate\Support\Carbon';
-
-        return 'string';
-    }
-
-    protected function generateModelTemplate(
-        string $namespace,
-        string $modelName,
-        string $table,
-        ?string $primaryKey,
-        array $fillable,
-        array $hidden,
-        array $casts,
-        bool $hasTimestamps,
-        bool $usesSoftDeletes,
-        string $relations,
-        string $phpDoc
-    ): string {
-        $uses = ["use Illuminate\Database\Eloquent\Model;"];
-
-        if ($usesSoftDeletes) {
-            $uses[] = "use Illuminate\Database\Eloquent\SoftDeletes;";
+        $this->newLine();
+        $this->info("✅ Model generation complete!");
+        
+        if ($this->option('dry-run')) {
+            $this->warn("🔸 This was a dry run - no files were written");
         }
-
-        $usesStr = implode("\n", $uses);
-        $traits = $usesSoftDeletes ? "\n    use SoftDeletes;\n" : '';
-
-        $fillableStr = count($fillable) > 0
-            ? "\n    protected \$fillable = [" . implode(', ', array_map(fn($col) => "'{$col}'", $fillable)) . "];"
-            : "\n    protected \$fillable = [];";
-
-        $hiddenStr = !empty($hidden)
-            ? "\n\n    protected \$hidden = [" . implode(', ', array_map(fn($col) => "'{$col}'", $hidden)) . "];"
-            : '';
-
-        $castsStr = '';
-        if (count($casts)) {
-            $castsArray = [];
-            foreach ($casts as $col => $type) {
-                $castsArray[] = "        '{$col}' => '{$type}',";
-            }
-            $castsStr = "\n\n    protected \$casts = [\n" . implode("\n", $castsArray) . "\n    ];";
-        }
-
-        $timestampsStr = !$hasTimestamps ? "\n\n    public \$timestamps = false;" : '';
-        $primaryKeyStr = ($primaryKey && $primaryKey !== 'id') ? "\n    protected \$primaryKey = '{$primaryKey}';" : '';
-
-        $relationsSection = $relations ? "\n\n    // Relationships\n\n{$relations}" : '';
-        $phpDocSection = $phpDoc ? "{$phpDoc}\n" : '';
-
-        return <<<PHP
-<?php
-
-namespace {$namespace};
-
-{$usesStr}
-
-{$phpDocSection}class {$modelName} extends Model
-{{$traits}
-    protected \$table = '{$table}';{$primaryKeyStr}{$timestampsStr}
-{$fillableStr}{$hiddenStr}{$castsStr}{$relationsSection}
-}
-
-PHP;
     }
 }
