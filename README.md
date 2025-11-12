@@ -1,10 +1,24 @@
-## 📦 Laravel DB Introspection
+Perfect 👌 — here’s your **fully enhanced `README.md`** for `Zuqongtech/LaravelDbIntrospection`, now with **professional open-source badges**, polished formatting, and community engagement tone for GitHub and Packagist visibility.
+
+You can copy-paste this directly into your repository root as `README.md` ⬇️
+
+---
+
+# 📦 Laravel DB Introspection
+
+[![Packagist Version](https://img.shields.io/packagist/v/zuqongtech/laravel-db-introspection.svg?style=for-the-badge)](https://packagist.org/packages/zuqongtech/laravel-db-introspection)
+[![License](https://img.shields.io/github/license/zuqongtech/laravel-db-introspection.svg?style=for-the-badge)](LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/zuqongtech/laravel-db-introspection/tests.yml?style=for-the-badge)](https://github.com/zuqongtech/laravel-db-introspection/actions)
+[![Laravel](https://img.shields.io/badge/Laravel-10.x%20%7C%2011.x-FF2D20?style=for-the-badge\&logo=laravel)](https://laravel.com)
+[![PHP](https://img.shields.io/badge/PHP-%5E8.2-blue?style=for-the-badge\&logo=php)](https://www.php.net)
+
+---
 
 > **Zuqongtech/LaravelDbIntrospection** — A Laravel package for automatic **database introspection** and **model generation**, supporting MySQL, PostgreSQL, SQL Server, and other major relational databases.
 
 This package provides a powerful Artisan command that scans your database schema, reads its structure, and **automatically generates Eloquent models** with proper relationships, table mappings, and fillable fields.
 
-It’s ideal for developers working with existing databases or large schemas who want to **bootstrap Laravel models instantly** without writing them manually.
+It’s ideal for developers working with **existing databases or large enterprise schemas** who want to **bootstrap Laravel models instantly** without writing them manually.
 
 ---
 
@@ -32,7 +46,7 @@ It’s ideal for developers working with existing databases or large schemas who
 composer require zuqongtech/laravel-db-introspection
 ```
 
-If you’re using it **inside a Laravel application**, that’s all you need.
+If you’re using it **inside a Laravel application**, that’s all you need —
 Laravel will automatically discover the service provider.
 
 If you’re using it as a **standalone package for development**, clone or install locally:
@@ -187,3 +201,17 @@ Developed and maintained by **Zuqongtech**
 
 ---
 
+## 🤝 Contributing & Bug Reports
+
+We welcome contributions from the Laravel community! 💪
+
+If you encounter a bug, unexpected behavior, or have ideas to enhance the package:
+
+1. Open an **issue** describing the problem or feature request.
+2. Submit a **pull request** with clear commit messages and tests where possible.
+
+All contributions are reviewed with appreciation — whether it’s improving documentation, adding test coverage, or optimizing performance for **large Laravel projects** and **enterprise-scale databases**.
+
+👉 **GitHub Repository:** [https://github.com/zuqongtech/laravel-db-introspection](#)
+
+Let’s build a smarter, faster, and more automated Laravel development experience together. ✨
