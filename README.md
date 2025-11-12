@@ -1,6 +1,3 @@
-Perfect 👏 — since the package now uses **a single powerful Artisan command** (`php artisan db:generate-models`) instead of `introspect:database`, here’s your **fine-tuned and final** `README.md` version — rewritten to match the actual command signature, flags, and tone suitable for **Packagist** and **GitHub** presentation.
-
----
 
 # 📦 Laravel DB Introspection
 
