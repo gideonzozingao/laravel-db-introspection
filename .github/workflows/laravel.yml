@@ -1,0 +1,65 @@
+name: Laravel
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  laravel-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1️⃣ Checkout repository
+    - uses: actions/checkout@v4
+
+    # 2️⃣ Setup PHP
+    - uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, bcmath, sqlite3, pdo_sqlite
+        coverage: none
+
+    # 3️⃣ Copy environment file
+    - name: Copy .env
+      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+    # 4️⃣ Install Composer dependencies
+    - name: Install Dependencies
+      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+    # 5️⃣ Generate Application Key
+    - name: Generate key
+      run: php artisan key:generate
+
+    # 6️⃣ Set permissions
+    - name: Directory Permissions
+      run: chmod -R 777 storage bootstrap/cache
+
+    # 7️⃣ Create SQLite Database
+    - name: Create Database
+      run: |
+        mkdir -p database
+        touch database/database.sqlite
+
+    # 8️⃣ Run Migrations
+    - name: Run Database Migrations
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan migrate:fresh --force
+
+    # 9️⃣ Run DB Introspection / Model Generation
+    - name: Generate Models via DB Introspection
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan db:generate-models
+
+    # 🔟 Run PHPUnit/Pest tests
+    - name: Execute tests (Unit and Feature)
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan test --no-interaction
