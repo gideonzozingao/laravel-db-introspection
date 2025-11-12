@@ -1,9 +1,3 @@
-Perfect 👌 — here’s your **fully enhanced `README.md`** for `Zuqongtech/LaravelDbIntrospection`, now with **professional open-source badges**, polished formatting, and community engagement tone for GitHub and Packagist visibility.
-
-You can copy-paste this directly into your repository root as `README.md` ⬇️
-
----
-
 # 📦 Laravel DB Introspection
 
 [![Packagist Version](https://img.shields.io/packagist/v/zuqongtech/laravel-db-introspection.svg?style=for-the-badge)](https://packagist.org/packages/zuqongtech/laravel-db-introspection)
