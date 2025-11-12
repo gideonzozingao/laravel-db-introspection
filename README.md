@@ -187,5 +187,3 @@ Developed and maintained by **Zuqongtech**
 
 ---
 
-Would you like me to extend this README to include **example output for PostgreSQL and SQL Server introspection** (so users can see what relationships look like for those engines)?
-
