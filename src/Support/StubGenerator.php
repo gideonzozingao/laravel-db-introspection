@@ -275,9 +275,10 @@ STUB;
     /**
      * Generate primary key property stub
      */
-    public static function primaryKeyStub(string $primaryKey, int $indent = 1): string
+    public static function primaryKeyStub(?string $primaryKey, int $indent = 1): string
     {
-        if ($primaryKey === 'id') {
+        // If null or 'id', don't add the property (use Laravel's default)
+        if ($primaryKey === null || $primaryKey === 'id') {
             return '';
         }
 

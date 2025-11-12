@@ -194,7 +194,7 @@ class DatabaseInspector
     /**
      * Get primary key for a table
      */
-    public function getPrimaryKey(string $table): ?string
+    public function getPrimaryKey(string $table): string
     {
         try {
             $result = match ($this->driver) {
@@ -224,9 +224,9 @@ class DatabaseInspector
                 default => null,
             };
 
-            return $result;
+            return $result ?? 'id';
         } catch (\Exception $e) {
-            return null;
+            return 'id';
         }
     }
 
@@ -238,14 +238,14 @@ class DatabaseInspector
         $foreignKeys = match ($this->driver) {
             'mysql' => $this->connection->select("
                 SELECT
-                    column_name,
-                    referenced_table_name,
-                    referenced_column_name,
-                    constraint_name
+                    COLUMN_NAME as column_name,
+                    REFERENCED_TABLE_NAME as referenced_table_name,
+                    REFERENCED_COLUMN_NAME as referenced_column_name,
+                    CONSTRAINT_NAME as constraint_name
                 FROM information_schema.KEY_COLUMN_USAGE
                 WHERE TABLE_SCHEMA = DATABASE()
                 AND TABLE_NAME = ?
-                AND referenced_table_name IS NOT NULL
+                AND REFERENCED_TABLE_NAME IS NOT NULL
             ", [$table]),
 
             'pgsql' => $this->connection->select("

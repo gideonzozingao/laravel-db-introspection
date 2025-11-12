@@ -8,10 +8,11 @@ use Zuqongtech\LaravelDbIntrospection\Support\RelationshipDetector;
 use Zuqongtech\LaravelDbIntrospection\Support\ModelBuilder;
 use Zuqongtech\LaravelDbIntrospection\Support\FileWriter;
 use Zuqongtech\LaravelDbIntrospection\Support\Helpers;
+use Zuqongtech\LaravelDbIntrospection\SupportConfigValidator;
 
 class GenerateModelsFromDatabase extends Command
 {
-    protected $signature = 'introspection:generate-models
+    protected $signature = 'db:generate-models
                             {--namespace=App\\Models : Namespace for generated models}
                             {--connection= : Database connection name (optional)}
                             {--tables=* : Specific tables to generate (optional)}
@@ -29,10 +30,11 @@ class GenerateModelsFromDatabase extends Command
     protected DatabaseInspector $inspector;
     protected RelationshipDetector $relationshipDetector;
     protected FileWriter $fileWriter;
+    
 
     public function handle(): int
     {
-        // Initialize components
+        
         $connectionName = $this->option('connection') ?: config('database.default');
         $this->inspector = new DatabaseInspector($connectionName);
         $this->relationshipDetector = new RelationshipDetector($this->inspector);
