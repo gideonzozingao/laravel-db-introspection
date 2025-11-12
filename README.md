@@ -1,3 +1,7 @@
+Perfect 👏 — since the package now uses **a single powerful Artisan command** (`php artisan db:generate-models`) instead of `introspect:database`, here’s your **fine-tuned and final** `README.md` version — rewritten to match the actual command signature, flags, and tone suitable for **Packagist** and **GitHub** presentation.
+
+---
+
 # 📦 Laravel DB Introspection
 
 [![Packagist Version](https://img.shields.io/packagist/v/zuqongtech/laravel-db-introspection.svg?style=for-the-badge)](https://packagist.org/packages/zuqongtech/laravel-db-introspection)
@@ -8,42 +12,39 @@
 
 ---
 
-> **Zuqongtech/LaravelDbIntrospection** — A Laravel package for automatic **database introspection** and **model generation**, supporting MySQL, PostgreSQL, SQL Server, and other major relational databases.
+> **Zuqongtech/Laravel-DB-Introspection** — a Laravel package for automatic **database introspection** and **model generation**, supporting MySQL, PostgreSQL, SQL Server, and other major relational databases.
 
-This package provides a powerful Artisan command that scans your database schema, reads its structure, and **automatically generates Eloquent models** with proper relationships, table mappings, and fillable fields.
+This package provides a single, powerful Artisan command that analyzes your connected database schema and **automatically generates elegant Eloquent models** — including table mappings, fillable fields, and detected relationships.
 
-It’s ideal for developers working with **existing databases or large enterprise schemas** who want to **bootstrap Laravel models instantly** without writing them manually.
+It’s perfect for developers working with **existing or enterprise-scale databases** who want to bootstrap Laravel models instantly, with **no manual typing**.
 
 ---
 
 ## 🧠 Features
 
-* 🔍 Database introspection for multiple engines:
+* 🔍 Multi-database engine support:
 
   * MySQL
   * PostgreSQL
   * SQL Server
-  * SQLite
-* 🧩 Auto-generates Eloquent models for all tables
-* 🔗 Detects relationships (hasOne, hasMany, belongsTo) where possible
-* ⚙️ Configurable output directory and namespace
-* 📁 Uses Laravel’s native filesystem and schema builder
-* 🧪 Fully testable with [Orchestra Testbench](https://github.com/orchestral/testbench)
+* 🧩 Auto-generates Eloquent models for every table
+* 🔗 Detects and maps relationships (`hasOne`, `hasMany`, `belongsTo`)
+* ⚙️ Customizable output directory and namespace
+* 📁 Uses Laravel’s filesystem and schema builder for seamless integration
 
 ---
 
 ## 🚀 Installation
 
-### Step 1 — Install via Composer
+Install the package via Composer:
 
 ```bash
 composer require zuqongtech/laravel-db-introspection
 ```
 
-If you’re using it **inside a Laravel application**, that’s all you need —
-Laravel will automatically discover the service provider.
+If used inside a Laravel app, the service provider is automatically registered.
 
-If you’re using it as a **standalone package for development**, clone or install locally:
+For local or standalone development:
 
 ```bash
 git clone https://github.com/zuqongtech/laravel-db-introspection.git
@@ -55,24 +56,24 @@ composer install
 
 ## ⚙️ Configuration
 
-If you’d like to publish the config file to customize output paths or namespace:
+To publish the configuration file for custom paths and namespace:
 
 ```bash
 php artisan vendor:publish --provider="Zuqongtech\LaravelDbIntrospection\LaravelDbIntrospectionServiceProvider" --tag=config
 ```
 
-This will create:
+This creates:
 
 ```
 config/db-introspection.php
 ```
 
-Inside, you can set:
+Example configuration:
 
 ```php
 return [
-    'output_path' => app_path('Models/Generated'),
-    'namespace' => 'App\\Models\\Generated',
+    'output_path' => app_path('Models'),
+    'namespace'   => 'App\\Models',
 ];
 ```
 
@@ -80,81 +81,55 @@ return [
 
 ## 🧭 Usage
 
-### Step 1 — Run the Introspection Command
+Run the package with one simple Artisan command:
 
 ```bash
-php artisan introspect:database
+php artisan db:generate-models
 ```
 
-### Step 2 — Choose Database Connection
+### Optional Flags
 
-You can specify which connection to introspect:
+| Flag           | Description                  | Example                                |
+| -------------- | ---------------------------- | -------------------------------------- |
+| `--connection` | Use a specific DB connection | `--connection=pgsql`                   |
+| `--path`       | Override output directory    | `--path=app/Models/Generated`          |
+| `--namespace`  | Override generated namespace | `--namespace="App\\Models\\Generated"` |
+| `--force`      | Overwrite existing models    | `--force`                              |
+| `--relations`  | Auto-detect relationships    | `--relations`                          |
+| `--timestamps` | Include timestamp properties | `--timestamps`                         |
+
+Example usage:
 
 ```bash
-php artisan introspect:database --connection=pgsql
+php artisan db:generate-models --connection=mysql --path=app/Models/Auto --relations --force
 ```
 
-### Step 3 — Check Generated Models
+---
 
-Models will be generated automatically in the configured output directory.
+## 📂 Example Output
 
-Example output:
+After running the command, your models are automatically generated in the configured directory:
 
 ```
-app/Models/Generated/User.php
-app/Models/Generated/Order.php
-app/Models/Generated/Product.php
+app/Models/Auto/User.php
+app/Models/Auto/Order.php
+app/Models/Auto/Product.php
 ```
 
 Each model includes:
 
 * `$table` property
-* `$fillable` fields
-* Detected relationships
+* `$fillable` attributes
+* Relationship definitions (if enabled)
 
 ---
 
-## 🧪 Running Tests
-
-To ensure everything is working properly, run:
-
-```bash
-composer test
-```
-
-or directly:
-
-```bash
-vendor/bin/phpunit
-```
-
----
-
-## 🧰 Development
-
-If you want to contribute or modify the package:
-
-1. Clone the repo
-2. Install dependencies
-
-   ```bash
-   composer install
-   ```
-3. Run tests
-
-   ```bash
-   composer test
-   ```
-4. Make your changes and submit a PR
-
----
-
-## 📁 Example Generated Model
+## 💡 Example Generated Model
 
 ```php
 <?php
 
-namespace App\Models\Generated;
+namespace App\Models\Auto;
 
 use Illuminate\Database\Eloquent\Model;
 
@@ -180,6 +155,37 @@ class Orders extends Model
 
 ---
 
+## 🧪 Running Tests
+
+Run the test suite to validate functionality:
+
+```bash
+composer test
+```
+
+or directly via PHPUnit:
+
+```bash
+vendor/bin/phpunit
+```
+
+---
+
+## 🧰 Development
+
+If you want to contribute or customize:
+
+```bash
+git clone https://github.com/zuqongtech/laravel-db-introspection.git
+cd laravel-db-introspection
+composer install
+composer test
+```
+
+Submit a pull request with well-documented commits and test coverage.
+
+---
+
 ## 🧩 Requirements
 
 * PHP 8.2 or higher
@@ -197,15 +203,16 @@ Developed and maintained by **Zuqongtech**
 
 ## 🤝 Contributing & Bug Reports
 
-We welcome contributions from the Laravel community! 💪
+We welcome all contributions from the Laravel community! 💪
 
-If you encounter a bug, unexpected behavior, or have ideas to enhance the package:
+If you discover a bug, want to request a feature, or improve performance:
 
-1. Open an **issue** describing the problem or feature request.
-2. Submit a **pull request** with clear commit messages and tests where possible.
+1. Open an [issue](https://github.com/gideonzozingao/laravel-db-introspection/issues) describing the problem.
+2. Submit a pull request with tests where possible.
 
-All contributions are reviewed with appreciation — whether it’s improving documentation, adding test coverage, or optimizing performance for **large Laravel projects** and **enterprise-scale databases**.
+Every contribution helps make **Laravel DB Introspection** more reliable and developer-friendly — empowering teams working with **large-scale databases** to move faster and smarter. ✨
 
-👉 **GitHub Repository:** [https://github.com/gideonzozingao/laravel-db-introspection](#)
+👉 **GitHub:** [github.com/gideonzozingao/laravel-db-introspection](https://github.com/gideonzozingao/laravel-db-introspection)
 
-Let’s build a smarter, faster, and more automated Laravel development experience together. ✨
+---
+
