@@ -212,6 +212,6 @@ If you encounter a bug, unexpected behavior, or have ideas to enhance the packag
 
 All contributions are reviewed with appreciation — whether it’s improving documentation, adding test coverage, or optimizing performance for **large Laravel projects** and **enterprise-scale databases**.
 
-👉 **GitHub Repository:** [https://github.com/zuqongtech/laravel-db-introspection](#)
+👉 **GitHub Repository:** [https://github.com/gideonzozingao/laravel-db-introspection](#)
 
 Let’s build a smarter, faster, and more automated Laravel development experience together. ✨
