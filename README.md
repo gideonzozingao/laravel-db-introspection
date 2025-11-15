@@ -263,13 +263,4 @@ Issues and PRs are welcome!
 
 👉 GitHub: [https://github.com/gideonzozingao/laravel-db-introspection](https://github.com/gideonzozingao/laravel-db-introspection)
 
----
 
-If you'd like, I can also:
-
-✅ generate a **CHANGELOG.md**
-✅ create a **badges-only header**
-✅ rewrite this in a **more marketing-style tone**
-✅ generate documentation pages for `/docs`
-
-Just tell me!
