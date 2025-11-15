@@ -9,39 +9,38 @@
 
 ---
 
-> **Zuqongtech/Laravel-DB-Introspection** — a Laravel package for automatic **database introspection** and **model generation**, supporting MySQL, PostgreSQL, SQL Server, and other major relational databases.
+> **Zuqongtech/Laravel-DB-Introspection** — a Laravel package for automatic **database introspection**, model discovery, constraint analysis, and **Eloquent model generation**.
 
-This package provides a single, powerful Artisan command that analyzes your connected database schema and **automatically generates elegant Eloquent models** — including table mappings, fillable fields, and detected relationships.
+It scans your connected database, analyzes schema metadata, and **automatically generates robust Eloquent models** — complete with relationships, indexes, PHPDoc, and constraints.
 
-It’s perfect for developers working with **existing or enterprise-scale databases** who want to bootstrap Laravel models instantly, with **no manual typing**.
-
----
-
-## 🧠 Features
-
-* 🔍 Multi-database engine support:
-
-  * MySQL
-  * PostgreSQL
-  * SQL Server
-* 🧩 Auto-generates Eloquent models for every table
-* 🔗 Detects and maps relationships (`hasOne`, `hasMany`, `belongsTo`)
-* ⚙️ Customizable output directory and namespace
-* 📁 Uses Laravel’s filesystem and schema builder for seamless integration
+Perfect for teams working with **enterprise databases**, existing legacy schemas, or large systems that need instant, accurate Eloquent models.
 
 ---
 
-## 🚀 Installation
+# 🧠 Features
 
-Install the package via Composer:
+### Core Features
+
+✔ Multi-database engine support
+✔ Auto-generates Eloquent models
+✔ Relationship detection (FK-based)
+✔ Inverse relationships (optional)
+✔ Constraint & index analysis
+✔ Optional validation of keys and schema integrity
+✔ Full PHPDoc generation for IDEs
+✔ Dry-run preview mode
+✔ Backups of existing models
+✔ Highly configurable paths, namespaces & filters
+
+---
+
+# 🚀 Installation
 
 ```bash
 composer require zuqongtech/laravel-db-introspection
 ```
 
-If used inside a Laravel app, the service provider is automatically registered.
-
-For local or standalone development:
+For local package development:
 
 ```bash
 git clone https://github.com/zuqongtech/laravel-db-introspection.git
@@ -51,57 +50,135 @@ composer install
 
 ---
 
-## ⚙️ Configuration
+# ⚙️ Configuration
 
-To publish the configuration file for custom paths and namespace:
+Publish the config file:
 
 ```bash
 php artisan vendor:publish --provider="Zuqongtech\LaravelDbIntrospection\LaravelDbIntrospectionServiceProvider" --tag=config
 ```
 
-This creates:
+Generated file:
 
 ```
-config/db-introspection.php
+config/zt-introspection.php
 ```
 
-Example configuration:
+Basic config:
 
 ```php
 return [
     'output_path' => app_path('Models'),
     'namespace'   => 'App\\Models',
+    'ignore_tables' => [],
 ];
 ```
 
 ---
 
-## 🧭 Usage
+# 🧭 Usage
 
-Run the package with one simple Artisan command:
-
-```bash
-php artisan db:generate-models
-```
-
-### Optional Flags
-
-| Flag           | Description                  | Example                                |
-| -------------- | ---------------------------- | -------------------------------------- |
-| `--force`      | Overwrite existing models    | `--force`                              |
-
-
-Example usage:
+Run the command:
 
 ```bash
-php artisan db:generate-models  --force
+php artisan zt:generate-models
 ```
 
 ---
 
-## 📂 Example Output
+# 🔧 All Available Flags (Full Documentation)
 
-After running the command, your models are automatically generated in the configured directory:
+Below is the full documentation of **all flags** from the command signature:
+
+---
+
+## 🎯 Model Generation Flags
+
+| Flag           | Description                               | Example                             |
+| -------------- | ----------------------------------------- | ----------------------------------- |
+| `--force`      | Overwrite existing models                 | `--force`                           |
+| `--backup`     | Backup existing models before overwriting | `--backup`                          |
+| `--dry-run`    | Preview actions without writing files     | `--dry-run`                         |
+| `--namespace=` | Set the namespace of generated models     | `--namespace="App\\Domain\\Models"` |
+| `--path=`      | Base folder for generated models          | `--path=modules/Core`               |
+
+---
+
+## 🎛 Table Selection & Filtering
+
+| Flag            | Description                              | Example                          |
+| --------------- | ---------------------------------------- | -------------------------------- |
+| `--tables=*`    | Only generate models for specific tables | `--tables=users --tables=orders` |
+| `--ignore=*`    | Skip listed tables                       | `--ignore=migrations`            |
+| `--connection=` | Specify database connection              | `--connection=pgsql`             |
+
+---
+
+## 📚 Documentation & Metadata Flags
+
+| Flag                 | Description                                | Example              |
+| -------------------- | ------------------------------------------ | -------------------- |
+| `--with-phpdoc`      | Include PHPDoc blocks for IDE autocomplete | `--with-phpdoc`      |
+| `--with-constraints` | Include constraints in model comments      | `--with-constraints` |
+
+---
+
+## 🔗 Relationship Flags
+
+| Flag             | Description                                      | Example          |
+| ---------------- | ------------------------------------------------ | ---------------- |
+| `--with-inverse` | Generate inverse relations (`hasMany`, `hasOne`) | `--with-inverse` |
+| `--validate-fk`  | Validate all foreign key references              | `--validate-fk`  |
+
+---
+
+## 🧱 Constraint & Integrity Analysis
+
+| Flag                     | Description                                    | Example                  |
+| ------------------------ | ---------------------------------------------- | ------------------------ |
+| `--analyze-constraints`  | Display constraint summary (PKs, FKs, indexes) | `--analyze-constraints`  |
+| `--validate-fk`          | Validate FK integrity across tables            | `--validate-fk`          |
+| `--show-recommendations` | Show optimization suggestions                  | `--show-recommendations` |
+
+---
+
+# 🔥 Combined Example Commands
+
+### Generate everything with PHPDoc + inverse relationships:
+
+```bash
+php artisan zt:generate-models --with-phpdoc --with-inverse
+```
+
+### Only generate the `users` and `orders` models:
+
+```bash
+php artisan zt:generate-models --tables=users --tables=orders
+```
+
+### Validate foreign keys + analyze constraints:
+
+```bash
+php artisan zt:generate-models --validate-fk --analyze-constraints
+```
+
+### Full analysis + recommendations:
+
+```bash
+php artisan zt:generate-models --analyze-constraints --show-recommendations
+```
+
+### Run without creating any files (dry-run):
+
+```bash
+php artisan zt:generate-models --dry-run
+```
+
+---
+
+# 📂 Example Output
+
+Generated files:
 
 ```
 app/Models/User.php
@@ -109,15 +186,20 @@ app/Models/Order.php
 app/Models/Product.php
 ```
 
-Each model includes:
+Each contains:
 
-* `$table` property
-* `$fillable` attributes
-* Relationship definitions (if enabled)
+* `$table`
+* `$fillable`
+* `$primaryKey` or composite keys
+* Soft delete detection
+* Timestamp detection
+* Relationships (FK + inverse)
+* Optional PHPDoc
+* Optional constraint notes
 
 ---
 
-## 💡 Example Generated Model
+# 💡 Example Generated Model
 
 ```php
 <?php
@@ -148,48 +230,46 @@ class Orders extends Model
 
 ---
 
-## 🧰 Development
-
-If you want to contribute or customize:
+# 🧰 Development
 
 ```bash
 git clone https://github.com/zuqongtech/laravel-db-introspection.git
 cd laravel-db-introspection
 composer install
-
 ```
 
-Submit a pull request with well-documented commits and test coverage.
+PRs with tests and clean commit history are appreciated.
 
 ---
 
-## 🧩 Requirements
+# 🧩 Requirements
 
-* PHP 8.2 or higher
+* PHP 8.2+
 * Laravel 10.x or 11.x
 * Composer 2.x
 
 ---
 
-## 🪄 Credits
+# 🪄 Credits
 
 Developed and maintained by **Zuqongtech**
-© 2025 Gideon Zozingao. All rights reserved.
+© 2025 Gideon Zozingao.
 
 ---
 
-## 🤝 Contributing & Bug Reports
+# 🤝 Contributing & Bug Reports
 
-I welcome all contributions from the Laravel community! 💪
+Issues and PRs are welcome!
 
-If you discover a bug, want to request a feature, or improve performance:
-
-1. Open an [issue](https://github.com/gideonzozingao/laravel-db-introspection/issues) describing the problem.
-2. Submit a pull request with tests where possible.
-
-Every contribution helps make **Zuqongtech\LaravelDbIntrospection** more reliable and developer-friendly — empowering teams working with **large-scale databases** to move faster and smarter. ✨
-
-👉 **GitHub:** [github.com/gideonzozingao/laravel-db-introspection](https://github.com/gideonzozingao/laravel-db-introspection)
+👉 GitHub: [https://github.com/gideonzozingao/laravel-db-introspection](https://github.com/gideonzozingao/laravel-db-introspection)
 
 ---
 
+If you'd like, I can also:
+
+✅ generate a **CHANGELOG.md**
+✅ create a **badges-only header**
+✅ rewrite this in a **more marketing-style tone**
+✅ generate documentation pages for `/docs`
+
+Just tell me!
