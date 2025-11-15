@@ -67,6 +67,7 @@ class {class_name} extends Model
     protected $table = '{table}';
 {primary_key}
 {timestamps}
+{constraint_comments}
 {fillable}
 {hidden}
 {casts}
@@ -238,6 +239,14 @@ STUB;
                 $type = $property['type'] ?? 'mixed';
                 $name = $property['name'];
                 $comment = $property['comment'] ?? null;
+                
+                // Skip empty property definitions (used for table comments)
+                if (empty($type) && empty($name)) {
+                    if ($comment) {
+                        $lines[] = $comment;
+                    }
+                    continue;
+                }
                 
                 if ($comment) {
                     $lines[] = "@property {$type} \${$name} {$comment}";

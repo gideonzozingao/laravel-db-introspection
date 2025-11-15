@@ -18,7 +18,7 @@ class LaravelDbIntrospectionServiceProvider extends ServiceProvider
 
             // Publish config
             $this->publishes([
-                __DIR__ . '/../config/db-introspection.php' => config_path('db-introspection.php'),
+                __DIR__ . '/../config/zt-introspection.php' => config_path('zt-introspection.php'),
             ], 'config');
         }
     }
@@ -27,8 +27,8 @@ class LaravelDbIntrospectionServiceProvider extends ServiceProvider
     {
         // Merge default config
         $this->mergeConfigFrom(
-            __DIR__ . '/../config/db-introspection.php',
-            'db-introspection'
+            __DIR__ . '/../config/zt-introspection.php',
+            'zt-introspection'
         );
     }
 }

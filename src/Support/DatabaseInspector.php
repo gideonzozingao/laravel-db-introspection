@@ -103,6 +103,7 @@ class DatabaseInspector
             'extra' => $col->Extra,
             'comment' => $col->Comment,
             'key' => $col->Key,
+            'collation' => $col->Collation ?? null,
         ], $columns);
     }
 
@@ -136,6 +137,9 @@ class DatabaseInspector
             'extra' => strpos($col->column_default ?? '', 'nextval') !== false ? 'auto_increment' : '',
             'comment' => $col->column_comment,
             'key' => '',
+            'max_length' => $col->character_maximum_length,
+            'precision' => $col->numeric_precision,
+            'scale' => $col->numeric_scale,
         ], $columns);
     }
 
@@ -194,7 +198,7 @@ class DatabaseInspector
     /**
      * Get primary key for a table
      */
-    public function getPrimaryKey(string $table): string
+    public function getPrimaryKey(string $table): ?string
     {
         try {
             $result = match ($this->driver) {
@@ -227,6 +231,49 @@ class DatabaseInspector
             return $result ?? 'id';
         } catch (\Exception $e) {
             return 'id';
+        }
+    }
+
+    /**
+     * Get composite primary key columns
+     */
+    public function getCompositePrimaryKey(string $table): array
+    {
+        try {
+            $columns = match ($this->driver) {
+                'mysql' => collect($this->connection->select("
+                    SHOW KEYS FROM `{$table}` WHERE Key_name = 'PRIMARY'
+                    ORDER BY Seq_in_index
+                "))->pluck('Column_name')->toArray(),
+
+                'pgsql' => collect($this->connection->select("
+                    SELECT a.attname
+                    FROM pg_index i
+                    JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+                    WHERE i.indrelid = ?::regclass AND i.indisprimary
+                    ORDER BY array_position(i.indkey, a.attnum)
+                ", [$table]))->pluck('attname')->toArray(),
+
+                'sqlite' => collect($this->connection->select("PRAGMA table_info(`{$table}`)"))
+                    ->where('pk', '>', 0)
+                    ->sortBy('pk')
+                    ->pluck('name')
+                    ->toArray(),
+
+                'sqlsrv' => collect($this->connection->select("
+                    SELECT COLUMN_NAME
+                    FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                    WHERE OBJECTPROPERTY(OBJECT_ID(CONSTRAINT_SCHEMA + '.' + CONSTRAINT_NAME), 'IsPrimaryKey') = 1
+                    AND TABLE_NAME = ?
+                    ORDER BY ORDINAL_POSITION
+                ", [$table]))->pluck('COLUMN_NAME')->toArray(),
+
+                default => [],
+            };
+
+            return $columns;
+        } catch (\Exception $e) {
+            return [];
         }
     }
 
@@ -304,43 +351,243 @@ class DatabaseInspector
     }
 
     /**
-     * Get indexes for a table
+     * Get all indexes for a table (including unique constraints)
      */
     public function getIndexes(string $table): array
     {
         $indexes = match ($this->driver) {
-            'mysql' => $this->connection->select("SHOW INDEX FROM `{$table}`"),
-            'pgsql' => $this->connection->select("
-                SELECT
-                    i.relname as index_name,
-                    a.attname as column_name,
-                    ix.indisunique as is_unique,
-                    ix.indisprimary as is_primary
-                FROM pg_class t
-                JOIN pg_index ix ON t.oid = ix.indrelid
-                JOIN pg_class i ON i.oid = ix.indexrelid
-                JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
-                WHERE t.relname = ?
-            ", [$table]),
-            'sqlite' => $this->connection->select("PRAGMA index_list(`{$table}`)"),
-            'sqlsrv' => $this->connection->select("
-                SELECT 
-                    i.name as index_name,
-                    c.name as column_name,
-                    i.is_unique
-                FROM sys.indexes i
-                JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
-                JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
-                WHERE i.object_id = OBJECT_ID(?)
-            ", [$table]),
+            'mysql' => $this->getMysqlIndexes($table),
+            'pgsql' => $this->getPostgresIndexes($table),
+            'sqlite' => $this->getSqliteIndexes($table),
+            'sqlsrv' => $this->getSqlServerIndexes($table),
             default => [],
         };
 
+        return $indexes;
+    }
+
+    /**
+     * Get MySQL indexes
+     */
+    protected function getMysqlIndexes(string $table): array
+    {
+        $rawIndexes = $this->connection->select("SHOW INDEX FROM `{$table}`");
+        
+        $grouped = [];
+        foreach ($rawIndexes as $idx) {
+            $name = $idx->Key_name;
+            
+            if (!isset($grouped[$name])) {
+                $grouped[$name] = [
+                    'name' => $name,
+                    'columns' => [],
+                    'unique' => $idx->Non_unique == 0,
+                    'primary' => $name === 'PRIMARY',
+                    'type' => $idx->Index_type,
+                ];
+            }
+            
+            $grouped[$name]['columns'][] = [
+                'name' => $idx->Column_name,
+                'order' => $idx->Collation === 'D' ? 'DESC' : 'ASC',
+                'length' => $idx->Sub_part,
+            ];
+        }
+        
+        return array_values($grouped);
+    }
+
+    /**
+ * Get PostgreSQL indexes
+ */
+protected function getPostgresIndexes(string $table): array
+{
+    $rawIndexes = $this->connection->select("
+        SELECT
+            i.relname as index_name,
+            array_agg(a.attname ORDER BY array_position(ix.indkey, a.attnum)) as columns,
+            ix.indisunique as is_unique,
+            ix.indisprimary as is_primary,
+            am.amname as index_type
+        FROM pg_class t
+        JOIN pg_index ix ON t.oid = ix.indrelid
+        JOIN pg_class i ON i.oid = ix.indexrelid
+        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
+        JOIN pg_am am ON i.relam = am.oid
+        WHERE t.relname = ?
+        GROUP BY i.relname, ix.indisunique, ix.indisprimary, am.amname
+    ", [$table]);
+    
+    return array_map(function($idx) {
+        // Convert PostgreSQL array string to PHP array
+        $columns = $idx->columns;
+        
+        // Handle PostgreSQL array format: {col1,col2,col3}
+        if (is_string($columns)) {
+            $columns = trim($columns, '{}');
+            $columns = $columns ? explode(',', $columns) : [];
+        }
+        
+        // Ensure it's an array
+        if (!is_array($columns)) {
+            $columns = [];
+        }
+        
+        return [
+            'name' => $idx->index_name,
+            'columns' => array_map(fn($col) => ['name' => $col, 'order' => 'ASC'], $columns),
+            'unique' => $idx->is_unique,
+            'primary' => $idx->is_primary,
+            'type' => strtoupper($idx->index_type),
+        ];
+    }, $rawIndexes);
+}
+
+    /**
+     * Get SQLite indexes
+     */
+    protected function getSqliteIndexes(string $table): array
+    {
+        $rawIndexes = $this->connection->select("PRAGMA index_list(`{$table}`)");
+        
+        $indexes = [];
+        foreach ($rawIndexes as $idx) {
+            $indexInfo = $this->connection->select("PRAGMA index_info(`{$idx->name}`)");
+            
+            $columns = array_map(fn($col) => [
+                'name' => $col->name,
+                'order' => 'ASC',
+            ], $indexInfo);
+            
+            $indexes[] = [
+                'name' => $idx->name,
+                'columns' => $columns,
+                'unique' => $idx->unique == 1,
+                'primary' => $idx->origin === 'pk',
+                'type' => 'BTREE',
+            ];
+        }
+        
+        return $indexes;
+    }
+
+    /**
+     * Get SQL Server indexes
+     */
+    protected function getSqlServerIndexes(string $table): array
+    {
+        $rawIndexes = $this->connection->select("
+            SELECT 
+                i.name as index_name,
+                i.is_unique,
+                i.is_primary_key,
+                i.type_desc,
+                STRING_AGG(c.name, ',') WITHIN GROUP (ORDER BY ic.key_ordinal) as columns
+            FROM sys.indexes i
+            JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+            JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+            WHERE i.object_id = OBJECT_ID(?)
+            GROUP BY i.name, i.is_unique, i.is_primary_key, i.type_desc
+        ", [$table]);
+        
         return array_map(fn($idx) => [
-            'name' => $idx->index_name ?? $idx->Key_name ?? $idx->name ?? '',
-            'column' => $idx->column_name ?? $idx->Column_name ?? '',
-            'unique' => ($idx->is_unique ?? $idx->Non_unique ?? 1) == 1,
-        ], is_array($indexes) ? $indexes : []);
+            'name' => $idx->index_name,
+            'columns' => array_map(fn($col) => ['name' => $col, 'order' => 'ASC'], explode(',', $idx->columns)),
+            'unique' => $idx->is_unique,
+            'primary' => $idx->is_primary_key,
+            'type' => $idx->type_desc,
+        ], $rawIndexes);
+    }
+
+    /**
+     * Get unique constraints for a table
+     */
+    public function getUniqueConstraints(string $table): array
+    {
+        $indexes = $this->getIndexes($table);
+        
+        return array_filter($indexes, fn($idx) => $idx['unique'] && !$idx['primary']);
+    }
+
+    /**
+     * Get check constraints
+     */
+    public function getCheckConstraints(string $table): array
+    {
+        $constraints = match ($this->driver) {
+            'mysql' => $this->getMysqlCheckConstraints($table),
+            'pgsql' => $this->getPostgresCheckConstraints($table),
+            'sqlite' => [], // SQLite check constraints are harder to introspect
+            'sqlsrv' => $this->getSqlServerCheckConstraints($table),
+            default => [],
+        };
+
+        return $constraints;
+    }
+
+    /**
+     * Get MySQL check constraints (8.0.16+)
+     */
+    protected function getMysqlCheckConstraints(string $table): array
+    {
+        try {
+            $constraints = $this->connection->select("
+                SELECT 
+                    CONSTRAINT_NAME as name,
+                    CHECK_CLAUSE as definition
+                FROM information_schema.CHECK_CONSTRAINTS
+                WHERE CONSTRAINT_SCHEMA = DATABASE()
+                AND TABLE_NAME = ?
+            ", [$table]);
+            
+            return array_map(fn($c) => [
+                'name' => $c->name,
+                'definition' => $c->definition,
+            ], $constraints);
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Get PostgreSQL check constraints
+     */
+    protected function getPostgresCheckConstraints(string $table): array
+    {
+        $constraints = $this->connection->select("
+            SELECT
+                con.conname as name,
+                pg_get_constraintdef(con.oid) as definition
+            FROM pg_constraint con
+            JOIN pg_class rel ON rel.oid = con.conrelid
+            WHERE rel.relname = ?
+            AND con.contype = 'c'
+        ", [$table]);
+        
+        return array_map(fn($c) => [
+            'name' => $c->name,
+            'definition' => $c->definition,
+        ], $constraints);
+    }
+
+    /**
+     * Get SQL Server check constraints
+     */
+    protected function getSqlServerCheckConstraints(string $table): array
+    {
+        $constraints = $this->connection->select("
+            SELECT 
+                cc.name,
+                cc.definition
+            FROM sys.check_constraints cc
+            JOIN sys.tables t ON cc.parent_object_id = t.object_id
+            WHERE t.name = ?
+        ", [$table]);
+        
+        return array_map(fn($c) => [
+            'name' => $c->name,
+            'definition' => $c->definition,
+        ], $constraints);
     }
 
     /**
@@ -376,5 +623,23 @@ class DatabaseInspector
         } catch (\Exception $e) {
             return null;
         }
+    }
+
+    /**
+     * Get comprehensive table metadata
+     */
+    public function getTableMetadata(string $table): array
+    {
+        return [
+            'name' => $table,
+            'comment' => $this->getTableComment($table),
+            'columns' => $this->getColumns($table),
+            'primary_key' => $this->getPrimaryKey($table),
+            'composite_primary_key' => $this->getCompositePrimaryKey($table),
+            'foreign_keys' => $this->getForeignKeys($table),
+            'indexes' => $this->getIndexes($table),
+            'unique_constraints' => $this->getUniqueConstraints($table),
+            'check_constraints' => $this->getCheckConstraints($table),
+        ];
     }
 }

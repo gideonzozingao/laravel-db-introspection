@@ -8,12 +8,17 @@ class ModelBuilder
     protected string $namespace;
     protected array $columns = [];
     protected array $foreignKeys = [];
+    protected array $indexes = [];
+    protected array $uniqueConstraints = [];
     protected ?string $primaryKey = 'id';
+    protected array $compositePrimaryKey = [];
     protected bool $timestamps = true;
     protected bool $softDeletes = false;
     protected bool $withPhpDoc = true;
     protected bool $withInverse = true;
+    protected bool $withConstraintComments = false;
     protected array $inverseRelationships = [];
+    protected ?array $constraintAnalysis = null;
 
     public function __construct(string $tableName, string $namespace)
     {
@@ -40,11 +45,38 @@ class ModelBuilder
     }
 
     /**
+     * Set indexes
+     */
+    public function setIndexes(array $indexes): self
+    {
+        $this->indexes = $indexes;
+        return $this;
+    }
+
+    /**
+     * Set unique constraints
+     */
+    public function setUniqueConstraints(array $uniqueConstraints): self
+    {
+        $this->uniqueConstraints = $uniqueConstraints;
+        return $this;
+    }
+
+    /**
      * Set primary key
      */
     public function setPrimaryKey(?string $primaryKey): self
     {
         $this->primaryKey = $primaryKey;
+        return $this;
+    }
+
+    /**
+     * Set composite primary key
+     */
+    public function setCompositePrimaryKey(array $compositePrimaryKey): self
+    {
+        $this->compositePrimaryKey = $compositePrimaryKey;
         return $this;
     }
 
@@ -85,6 +117,24 @@ class ModelBuilder
     }
 
     /**
+     * Set with constraint comments
+     */
+    public function setWithConstraintComments(bool $withConstraintComments): self
+    {
+        $this->withConstraintComments = $withConstraintComments;
+        return $this;
+    }
+
+    /**
+     * Set constraint analysis
+     */
+    public function setConstraintAnalysis(?array $constraintAnalysis): self
+    {
+        $this->constraintAnalysis = $constraintAnalysis;
+        return $this;
+    }
+
+    /**
      * Add inverse relationship
      */
     public function addInverseRelationship(string $methodName, string $relatedModel, string $foreignKey): self
@@ -105,13 +155,14 @@ class ModelBuilder
         $modelName = Helpers::tableToModelName($this->tableName);
         $uses = $this->buildUses();
         $docBlock = $this->withPhpDoc ? $this->buildClassDocBlock() : '';
-        $primaryKeyProperty = StubGenerator::primaryKeyStub($this->primaryKey);
+        $primaryKeyProperty = $this->buildPrimaryKeyProperty();
         $timestampsProperty = StubGenerator::timestampsStub($this->timestamps);
         $fillable = $this->buildFillable();
         $hidden = $this->buildHidden();
         $casts = $this->buildCasts();
         $dates = $this->buildDates();
         $relationships = $this->buildRelationships();
+        $constraintComments = $this->withConstraintComments ? $this->buildConstraintComments() : '';
 
         $generator = new StubGenerator([
             'namespace' => $this->namespace,
@@ -125,6 +176,7 @@ class ModelBuilder
             'hidden' => $hidden,
             'casts' => $casts,
             'dates' => $dates,
+            'constraint_comments' => $constraintComments,
             'relationships' => $relationships,
         ]);
 
@@ -153,15 +205,34 @@ class ModelBuilder
         $properties = [];
         $methods = [];
 
+        // Add table information
+        if ($this->withConstraintComments && $this->constraintAnalysis) {
+            $properties[] = [
+                'type' => '',
+                'name' => '',
+                'comment' => "Table: {$this->tableName}",
+            ];
+        }
+
         // Add property documentation
         foreach ($this->columns as $column) {
             $phpType = Helpers::mapDatabaseTypeToPhp($column['type']);
             $phpType = Helpers::isNullableType($phpType, $column['nullable']);
             
+            $comment = $column['comment'] ?: null;
+            
+            // Add constraint information to comment
+            if ($this->withConstraintComments) {
+                $constraintInfo = $this->getColumnConstraintInfo($column['name']);
+                if ($constraintInfo) {
+                    $comment = $comment ? "{$comment} ({$constraintInfo})" : $constraintInfo;
+                }
+            }
+            
             $properties[] = [
                 'type' => $phpType,
                 'name' => $column['name'],
-                'comment' => $column['comment'] ?: null,
+                'comment' => $comment,
             ];
         }
 
@@ -190,6 +261,83 @@ class ModelBuilder
     }
 
     /**
+     * Get constraint information for a column
+     */
+    protected function getColumnConstraintInfo(string $columnName): ?string
+    {
+        $info = [];
+
+        // Check if primary key
+        if (in_array($columnName, $this->compositePrimaryKey)) {
+            $info[] = 'PK';
+        }
+
+        // Check if foreign key
+        foreach ($this->foreignKeys as $fk) {
+            if ($fk['column'] === $columnName) {
+                $info[] = "FK -> {$fk['referenced_table']}.{$fk['referenced_column']}";
+            }
+        }
+
+        // Check if unique
+        foreach ($this->uniqueConstraints as $constraint) {
+            $constraintColumns = array_map(fn($col) => $col['name'], $constraint['columns']);
+            if (in_array($columnName, $constraintColumns)) {
+                $info[] = 'UNIQUE';
+                break;
+            }
+        }
+
+        // Check if indexed
+        foreach ($this->indexes as $index) {
+            if (!$index['primary'] && !$index['unique']) {
+                $indexColumns = array_map(fn($col) => $col['name'], $index['columns']);
+                if (in_array($columnName, $indexColumns)) {
+                    $info[] = 'INDEXED';
+                    break;
+                }
+            }
+        }
+
+        return !empty($info) ? implode(', ', $info) : null;
+    }
+
+    /**
+     * Build primary key property
+     */
+    protected function buildPrimaryKeyProperty(): string
+    {
+        // Handle composite primary keys
+        if (count($this->compositePrimaryKey) > 1) {
+            $indent = '    ';
+            $innerIndent = '        ';
+            
+            $stub = "\n{$indent}/**\n";
+            $stub .= "{$indent} * The primary key for the model.\n";
+            $stub .= "{$indent} *\n";
+            $stub .= "{$indent} * @var array<int, string>\n";
+            $stub .= "{$indent} */\n";
+            $stub .= "{$indent}protected \$primaryKey = [\n";
+            
+            foreach ($this->compositePrimaryKey as $column) {
+                $stub .= "{$innerIndent}'{$column}',\n";
+            }
+            
+            $stub .= "{$indent}];\n\n";
+            $stub .= "{$indent}/**\n";
+            $stub .= "{$indent} * Indicates if the IDs are auto-incrementing.\n";
+            $stub .= "{$indent} *\n";
+            $stub .= "{$indent} * @var bool\n";
+            $stub .= "{$indent} */\n";
+            $stub .= "{$indent}public \$incrementing = false;";
+            
+            return $stub;
+        }
+
+        return StubGenerator::primaryKeyStub($this->primaryKey);
+    }
+
+    /**
      * Build fillable property
      */
     protected function buildFillable(): string
@@ -201,6 +349,7 @@ class ModelBuilder
             
             // Skip primary key, timestamps, and auto-increment columns
             if (
+                in_array($columnName, $this->compositePrimaryKey) ||
                 $columnName === $this->primaryKey ||
                 Helpers::isTimestampColumn($columnName) ||
                 str_contains($column['extra'], 'auto_increment')
@@ -263,9 +412,69 @@ class ModelBuilder
      */
     protected function buildDates(): string
     {
-        // Modern Laravel uses casts for dates, so this is typically empty
-        // unless specifically needed for backward compatibility
         return '';
+    }
+
+    /**
+     * Build constraint comments section
+     */
+    protected function buildConstraintComments(): string
+    {
+        if (!$this->constraintAnalysis) {
+            return '';
+        }
+
+        $comments = [];
+        $indent = '    ';
+
+        // Primary Key info
+        if (!empty($this->constraintAnalysis['primary_key']['columns'])) {
+            $pkType = $this->constraintAnalysis['primary_key']['type'];
+            $pkCols = implode(', ', $this->constraintAnalysis['primary_key']['columns']);
+            $comments[] = "Primary Key: {$pkCols} ({$pkType})";
+        }
+
+        // Foreign Keys
+        if (!empty($this->constraintAnalysis['foreign_keys'])) {
+            $comments[] = "Foreign Keys:";
+            foreach ($this->constraintAnalysis['foreign_keys'] as $fk) {
+                $ref = $fk['references'];
+                $comments[] = "  - {$fk['column']} -> {$ref['table']}.{$ref['column']}";
+            }
+        }
+
+        // Unique Constraints
+        if (!empty($this->constraintAnalysis['unique_constraints'])) {
+            $comments[] = "Unique Constraints:";
+            foreach ($this->constraintAnalysis['unique_constraints'] as $constraint) {
+                $cols = implode(', ', $constraint['columns']);
+                $comments[] = "  - {$constraint['name']}: ({$cols})";
+            }
+        }
+
+        // Indexes
+        $nonUniqueIndexes = array_filter($this->constraintAnalysis['indexes'], fn($idx) => !$idx['is_unique'] && !$idx['is_primary']);
+        if (!empty($nonUniqueIndexes)) {
+            $comments[] = "Indexes:";
+            foreach ($nonUniqueIndexes as $index) {
+                $cols = implode(', ', $index['columns']);
+                $comments[] = "  - {$index['name']}: ({$cols})";
+            }
+        }
+
+        if (empty($comments)) {
+            return '';
+        }
+
+        $stub = "\n{$indent}/*\n";
+        $stub .= "{$indent} * Database Constraints\n";
+        $stub .= "{$indent} * " . str_repeat('-', 50) . "\n";
+        foreach ($comments as $comment) {
+            $stub .= "{$indent} * {$comment}\n";
+        }
+        $stub .= "{$indent} */\n";
+
+        return $stub;
     }
 
     /**

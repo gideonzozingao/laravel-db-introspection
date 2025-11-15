@@ -39,7 +39,7 @@ class ConfigValidator
      */
     protected function validateNamespace(): void
     {
-        $namespace = config('db-introspection.namespace');
+        $namespace = config('zt-introspection.namespace');
 
         if (empty($namespace)) {
             $this->addError('namespace', 'Namespace cannot be empty');
@@ -67,7 +67,7 @@ class ConfigValidator
      */
     protected function validateTargetPath(): void
     {
-        $path = config('db-introspection.target_path');
+        $path = config('zt-introspection.target_path');
 
         if (empty($path)) {
             $this->addError('target_path', 'Target path cannot be empty');
@@ -91,7 +91,7 @@ class ConfigValidator
      */
     protected function validateConnection(): void
     {
-        $connection = config('db-introspection.connection');
+        $connection = config('zt-introspection.connection');
 
         if ($connection !== null) {
             $availableConnections = array_keys(config('database.connections', []));
@@ -107,7 +107,7 @@ class ConfigValidator
      */
     protected function validateIgnoreTables(): void
     {
-        $ignoreTables = config('db-introspection.ignore_tables', []);
+        $ignoreTables = config('zt-introspection.ignore_tables', []);
 
         if (!is_array($ignoreTables)) {
             $this->addError('ignore_tables', 'Ignore tables must be an array');
@@ -121,7 +121,7 @@ class ConfigValidator
         }
 
         // Validate ignore patterns
-        $patterns = config('db-introspection.ignore_table_patterns', []);
+        $patterns = config('zt-introspection.ignore_table_patterns', []);
         
         if (!is_array($patterns)) {
             $this->addError('ignore_table_patterns', 'Ignore table patterns must be an array');
@@ -146,7 +146,7 @@ class ConfigValidator
      */
     protected function validateRelationships(): void
     {
-        $relationships = config('db-introspection.relationships', []);
+        $relationships = config('zt-introspection.relationships', []);
 
         if (!is_array($relationships)) {
             $this->addError('relationships', 'Relationships configuration must be an array');
@@ -182,7 +182,7 @@ class ConfigValidator
      */
     protected function validateNaming(): void
     {
-        $naming = config('db-introspection.naming', []);
+        $naming = config('zt-introspection.naming', []);
 
         if (!is_array($naming)) {
             $this->addError('naming', 'Naming configuration must be an array');
@@ -213,7 +213,7 @@ class ConfigValidator
      */
     protected function validateCodeStyle(): void
     {
-        $codeStyle = config('db-introspection.code_style', []);
+        $codeStyle = config('zt-introspection.code_style', []);
 
         if (!is_array($codeStyle)) {
             $this->addError('code_style', 'Code style configuration must be an array');
@@ -251,7 +251,7 @@ class ConfigValidator
      */
     protected function validatePerformance(): void
     {
-        $performance = config('db-introspection.performance', []);
+        $performance = config('zt-introspection.performance', []);
 
         if (!is_array($performance)) {
             $this->addError('performance', 'Performance configuration must be an array');
@@ -300,7 +300,7 @@ class ConfigValidator
      */
     protected function validateAdvanced(): void
     {
-        $advanced = config('db-introspection.advanced', []);
+        $advanced = config('zt-introspection.advanced', []);
 
         if (!is_array($advanced)) {
             $this->addError('advanced', 'Advanced configuration must be an array');
@@ -327,7 +327,7 @@ class ConfigValidator
      */
     protected function validateValidation(): void
     {
-        $validation = config('db-introspection.validation', []);
+        $validation = config('zt-introspection.validation', []);
 
         if (!is_array($validation)) {
             $this->addError('validation', 'Validation configuration must be an array');
@@ -352,7 +352,7 @@ class ConfigValidator
      */
     protected function validateOutput(): void
     {
-        $output = config('db-introspection.output', []);
+        $output = config('zt-introspection.output', []);
 
         if (!is_array($output)) {
             $this->addError('output', 'Output configuration must be an array');
@@ -384,7 +384,7 @@ class ConfigValidator
      */
     protected function validateTypeMappings(): void
     {
-        $typeMappings = config('db-introspection.type_mappings', []);
+        $typeMappings = config('zt-introspection.type_mappings', []);
 
         if (!is_array($typeMappings)) {
             $this->addError('type_mappings', 'Type mappings must be an array');
@@ -405,7 +405,7 @@ class ConfigValidator
         }
 
         // Validate cast mappings
-        $castMappings = config('db-introspection.cast_mappings', []);
+        $castMappings = config('zt-introspection.cast_mappings', []);
         
         if (!is_array($castMappings)) {
             $this->addError('cast_mappings', 'Cast mappings must be an array');
@@ -417,7 +417,7 @@ class ConfigValidator
      */
     protected function validateHooks(): void
     {
-        $hooks = config('db-introspection.hooks', []);
+        $hooks = config('zt-introspection.hooks', []);
 
         if (!is_array($hooks)) {
             $this->addError('hooks', 'Hooks configuration must be an array');
