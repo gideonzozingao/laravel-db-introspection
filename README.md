@@ -261,6 +261,4 @@ Developed and maintained by **Zuqongtech**
 
 Issues and PRs are welcome!
 
-👉 GitHub: [https://github.com/gideonzozingao/laravel-db-introspection](https://github.com/gideonzozingao/laravel-db-introspection)
-
-
+👉GitHub: [https://github.com/gideonzozingao/laravel-db-introspection](https://github.com/gideonzozingao/laravel-db-introspection)
