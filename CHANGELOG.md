@@ -1,45 +1,35 @@
-📜 CHANGELOG
+# 📜 CHANGELOG
 
 All notable changes to Laravel DB Introspection will be documented in this file.
 
 This project follows Semantic Versioning (SemVer) as closely as possible.
 During early development (0.x), minor versions may include breaking changes, which will always be clearly documented.
 
-🚀 v0.1.0 — Initial Public Release
+## v0.1.0 — Initial Public Release
 
 Release date: 2025-XX-XX
 Packagist: zuqongtech/laravel-db-introspection
 
 ✨ Added
-Core Functionality
+### Core Functionality
 
 Multi-database schema introspection support:
 
-MySQL
+- MySQL
+- PostgreSQL
+- SQL Server 
 
-PostgreSQL
-
-SQL Server
-
-Automatic Eloquent model generation from existing databases
+**Automatic Eloquent model generation from existing databases
 
 Accurate detection of:
-
-Primary keys (single & composite)
-
-Foreign keys
-
-Indexes and constraints
-
-Automatic relationship generation based on foreign keys
-
-Optional inverse relationship generation (hasMany, hasOne)
-
-Pivot table detection and handling
-
-Soft delete (deleted_at) detection
-
-Timestamp (created_at, updated_at) detection
+- Primary keys (single & composite)
+- Foreign keys 
+- Indexes and constraints
+- Automatic relationship generation based on foreign keys  
+- Optional inverse relationship generation (hasMany, hasOne)
+- Pivot table detection and handling
+- Soft delete (deleted_at) detection
+- Timestamp (created_at, updated_at) detection
 
 Model Generation
 
