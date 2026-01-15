@@ -1,16 +1,3 @@
-Below is a **clean, well-structured, and professional Markdown document**, rewritten from your content with:
-
-* Proper Markdown hierarchy
-* Consistent formatting
-* Clear sections and sub-sections
-* Packagist / GitHub–ready tone
-* No feature overstatement
-* Easy readability for developers and maintainers
-
-You can copy-paste this directly as `CHANGELOG.md`.
-
----
-
 # 📜 CHANGELOG
 
 All notable changes to **Laravel DB Introspection** will be documented in this file.
