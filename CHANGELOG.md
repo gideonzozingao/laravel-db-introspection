@@ -1,54 +1,311 @@
+📜 CHANGELOG
+
+All notable changes to Laravel DB Introspection will be documented in this file.
+
+This project follows Semantic Versioning (SemVer) as closely as possible.
+During early development (0.x), minor versions may include breaking changes, which will always be clearly documented.
+
+🚀 v0.1.0 — Initial Public Release
+
+Release date: 2025-XX-XX
+Packagist: zuqongtech/laravel-db-introspection
+
+✨ Added
+Core Functionality
+
+Multi-database schema introspection support:
+
+MySQL
+
+PostgreSQL
+
+SQL Server
+
+Automatic Eloquent model generation from existing databases
+
+Accurate detection of:
+
+Primary keys (single & composite)
+
+Foreign keys
+
+Indexes and constraints
+
+Automatic relationship generation based on foreign keys
+
+Optional inverse relationship generation (hasMany, hasOne)
+
+Pivot table detection and handling
+
+Soft delete (deleted_at) detection
+
+Timestamp (created_at, updated_at) detection
+
+Model Generation
+
+Generated models now include:
+
+$table declaration
+
+$fillable attributes
+
+$primaryKey handling (including composite keys)
+
+$casts where applicable
+
+Relationship methods (belongsTo, hasMany, hasOne)
+
+Optional PHPDoc blocks for IDE autocomplete
+
+Optional constraint and index notes in model comments
+
+Artisan Command
+
+Introduced the primary Artisan command:
+
+php artisan zt:generate-models
 
 
-# **CHANGELOG**
+Supported flags include:
 
-## **v0.0.1 – Initial Prototype Release**
+--force — Overwrite existing models
 
-* Added base project structure for *Laravel DB Introspection*.
-* Implemented core service classes for schema reading.
-* Introduced initial config file `db-introspection.php`.
-* Added basic CLI command scaffold `db:scan`.
-* Added helpers for database connection detection.
-* Added early-stage model generator draft.
+--backup — Backup existing models before overwriting
 
----
+--dry-run — Preview generated output without writing files
 
-## **v0.0.2 – Stable Schema Reader Update**
+--tables=* — Generate models only for specified tables
 
-* Improved MySQL, PostgreSQL, and SQL Server schema introspection logic.
-* Fixed issues with nullable columns not being detected correctly.
-* Added detection for primary keys, foreign keys, and indexes.
-* Added more robust error handling.
+--ignore=* — Skip specific tables
 
-* Generated models now include:
+--connection= — Specify database connection
 
-  * Fillable attributes
-  * Cast types
-  * Table names and primary keys
-* Improved naming strategy for classes.
-* Added support for pivot tables.
+--namespace= — Override model namespace
 
-* Enhanced CLI command output formatting.
-* Added interactive confirmation options.
-* Added `--force` option for regenerating models.
-* Added warnings for unrecognized database types.
+--path= — Override output directory
 
-* Introduced `ConfigValidator` to validate namespaces and paths.
-* Added validation warnings when directories are missing.
-* Added tests for configuration validator.
-* Introduced publishable config file.
-  
-* Improved directory creation logic for generated models.
-* Added support for custom output paths.
-* Added `--dry-run` mode (preview output).
-* Reduced duplicate file generation issues.
-* Added auto-generation for model observers.
-* Included new Artisan command:
-  `php artisan db:generate-observers`
-* Observers handle created/updated/deleted events scaffolding.
-* Added fallback logic for models without timestamps.
-* Added full README with usage examples.
-* Added installation instructions for Laravel 10–12.
-* Added GitHub Actions workflow for automated tests.
-* Cleaned unused classes and improved namespaces.
---
+--with-phpdoc — Include PHPDoc blocks
+
+--with-constraints — Include constraint notes
+
+--with-inverse — Generate inverse relationships
+
+--validate-fk — Validate foreign key integrity
+
+--analyze-constraints — Display schema constraint summary
+
+--show-recommendations — Display optimization suggestions
+
+Configuration
+
+Added publishable configuration file:
+
+config/zt-introspection.php
+
+
+Configurable options:
+
+Output paths
+
+Namespaces
+
+Ignored tables
+
+Introduced ConfigValidator for:
+
+Namespace validation
+
+Path validation
+
+Developer-friendly warnings
+
+CLI & Developer Experience
+
+Improved console output formatting
+
+Interactive confirmation prompts
+
+Graceful handling of unsupported database engines
+
+Improved directory auto-creation logic
+
+Reduced duplicate file generation issues
+
+Quality & Tooling
+
+Added automated tests for:
+
+Configuration validation
+
+Schema edge cases
+
+Added GitHub Actions CI workflow
+
+Improved error handling and exception clarity
+
+Verified compatibility with:
+
+PHP 8.2+
+
+Laravel 10.x
+
+Laravel 11.x
+
+Documentation
+
+Added comprehensive README with:
+
+Installation instructions
+
+Configuration guide
+
+Full CLI flag documentation
+
+Example commands and outputs
+
+Added example generated models
+
+Added contribution guidelines
+
+🛠 v0.1.1 — Maintenance & Stability Update (Planned)
+
+Status: Planned
+Type: Patch release
+
+Planned Improvements
+
+Improved handling of legacy schemas
+
+Better enum and custom column type detection
+
+Performance optimizations for large databases
+
+Additional PostgreSQL & SQL Server test coverage
+
+Minor CLI UX improvements
+
+No breaking changes expected.
+
+🚧 v0.2.0 — Generator Expansion & Architecture Upgrade (Planned)
+
+Status: Planned
+Type: Minor release (⚠️ may include breaking changes)
+
+🎯 Goals
+
+Transition the package from a model-only generator into a metadata-driven Laravel scaffolding framework, while preserving trust, stability, and configurability.
+
+✨ Planned Features
+Unified Generation Pipeline
+
+Introduce metadata-driven generation layer:
+
+Database is introspected once
+
+All generators consume unified metadata
+
+Centralized generation orchestration
+
+New Optional Generators
+
+Controllers (RESTful)
+
+API Resources
+
+Model Observers
+
+Authorization Policies
+
+New Artisan Command
+php artisan zt:generate
+
+
+With granular flags:
+
+--models
+
+--controllers
+
+--resources
+
+--observers
+
+--policies
+
+--all
+
+--only=users,orders
+
+🧠 Smart Automation (Planned)
+
+Ownership-based policy inference (user_id)
+
+Audit-aware observer templates
+
+Relationship-aware resource generation
+
+Foreign key–driven controller scaffolding
+
+⚙️ Configuration Enhancements
+
+Generator-level enable/disable options
+
+Per-generator namespace and path configuration
+
+Plugin-based generator registration
+
+🧪 Quality Improvements
+
+Expanded test suite for generators
+
+Metadata validation tests
+
+Improved error reporting for partial failures
+
+⚠️ BREAKING CHANGES POLICY
+
+This project follows Semantic Versioning with the following guarantees:
+
+During 0.x Releases
+
+Minor versions (0.x) may introduce breaking changes
+
+All breaking changes will be:
+
+Clearly documented in this CHANGELOG
+
+Explained with upgrade notes
+
+From 1.0.0 Onwards
+
+Breaking changes will only occur in major releases
+
+Minor and patch releases will be backward-compatible
+
+What Counts as a Breaking Change
+
+Renaming or removing Artisan commands
+
+Changing default namespaces or paths
+
+Modifying generated model behavior
+
+Removing or changing configuration keys
+
+📌 Upgrade Guidance
+
+Upgrade notes will be included in:
+
+GitHub Releases
+
+CHANGELOG entries
+
+README where applicable
+
+🧾 Notes
+
+Laravel DB Introspection is designed to evolve incrementally from a model introspection tool into a full Laravel database-driven scaffolding system, without sacrificing correctness, transparency, or developer trust.
+
+Maintained by: Zuqongtech
+Author: Gideon Zozingao
+© 2025
