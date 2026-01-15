@@ -19,7 +19,7 @@ Multi-database schema introspection support:
 - PostgreSQL
 - SQL Server 
 
-**Automatic Eloquent model generation from existing databases
+** Automatic Eloquent model generation from existing databases
 
 Accurate detection of:
 - Primary keys (single & composite)
