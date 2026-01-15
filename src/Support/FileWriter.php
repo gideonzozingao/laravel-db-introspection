@@ -7,12 +7,14 @@ use Illuminate\Filesystem\Filesystem;
 class FileWriter
 {
     protected Filesystem $files;
+
     protected string $basePath;
+
     protected bool $dryRun;
 
     public function __construct(?string $basePath = null, bool $dryRun = false)
     {
-        $this->files = new Filesystem();
+        $this->files = new Filesystem;
         $this->basePath = $basePath ?? base_path();
         $this->dryRun = $dryRun;
     }
@@ -27,7 +29,7 @@ class FileWriter
 
         $result = [
             'path' => $filePath,
-            'relative_path' => str_replace($this->basePath . '/', '', $filePath),
+            'relative_path' => str_replace($this->basePath.'/', '', $filePath),
             'existed' => $this->files->exists($filePath),
             'written' => false,
             'dry_run' => $this->dryRun,
@@ -35,11 +37,12 @@ class FileWriter
 
         if ($this->dryRun) {
             $result['message'] = 'Dry run - file not written';
+
             return $result;
         }
 
         // Ensure directory exists
-        if (!$this->files->isDirectory($directory)) {
+        if (! $this->files->isDirectory($directory)) {
             $this->files->makeDirectory($directory, 0755, true);
         }
 
@@ -63,9 +66,9 @@ class FileWriter
     protected function getFilePath(string $namespace, string $modelName, string $targetPath): string
     {
         $namespacePath = Helpers::namespaceToPath($namespace, $targetPath);
-        $fullPath = $this->basePath . '/' . $targetPath . '/' . $namespacePath;
-        
-        return $fullPath . '/' . $modelName . '.php';
+        $fullPath = $this->basePath.'/'.$targetPath.'/'.$namespacePath;
+
+        return $fullPath.'/'.$modelName.'.php';
     }
 
     /**
@@ -74,6 +77,7 @@ class FileWriter
     public function modelExists(string $namespace, string $modelName, string $targetPath): bool
     {
         $filePath = $this->getFilePath($namespace, $modelName, $targetPath);
+
         return $this->files->exists($filePath);
     }
 
@@ -83,12 +87,12 @@ class FileWriter
     public function backupModel(string $namespace, string $modelName, string $targetPath): ?string
     {
         $filePath = $this->getFilePath($namespace, $modelName, $targetPath);
-        
-        if (!$this->files->exists($filePath)) {
+
+        if (! $this->files->exists($filePath)) {
             return null;
         }
 
-        $backupPath = $filePath . '.backup.' . date('YmdHis');
+        $backupPath = $filePath.'.backup.'.date('YmdHis');
         $this->files->copy($filePath, $backupPath);
 
         return $backupPath;
@@ -100,8 +104,8 @@ class FileWriter
     public function deleteModel(string $namespace, string $modelName, string $targetPath): bool
     {
         $filePath = $this->getFilePath($namespace, $modelName, $targetPath);
-        
-        if (!$this->files->exists($filePath)) {
+
+        if (! $this->files->exists($filePath)) {
             return false;
         }
 
@@ -114,8 +118,8 @@ class FileWriter
     public function getModelContent(string $namespace, string $modelName, string $targetPath): ?string
     {
         $filePath = $this->getFilePath($namespace, $modelName, $targetPath);
-        
-        if (!$this->files->exists($filePath)) {
+
+        if (! $this->files->exists($filePath)) {
             return null;
         }
 
@@ -128,9 +132,9 @@ class FileWriter
     public function listModels(string $namespace, string $targetPath): array
     {
         $namespacePath = Helpers::namespaceToPath($namespace, $targetPath);
-        $fullPath = $this->basePath . '/' . $targetPath . '/' . $namespacePath;
+        $fullPath = $this->basePath.'/'.$targetPath.'/'.$namespacePath;
 
-        if (!$this->files->isDirectory($fullPath)) {
+        if (! $this->files->isDirectory($fullPath)) {
             return [];
         }
 
@@ -169,6 +173,7 @@ class FileWriter
     public function setDryRun(bool $dryRun): self
     {
         $this->dryRun = $dryRun;
+
         return $this;
     }
 

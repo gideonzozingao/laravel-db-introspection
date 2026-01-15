@@ -5,6 +5,7 @@ namespace Zuqongtech\LaravelDbIntrospection\Support;
 class ConstraintAnalyzer
 {
     protected DatabaseInspector $inspector;
+
     protected array $tableCache = [];
 
     public function __construct(DatabaseInspector $inspector)
@@ -22,7 +23,7 @@ class ConstraintAnalyzer
         }
 
         $metadata = $this->inspector->getTableMetadata($table);
-        
+
         $analysis = [
             'table' => $table,
             'primary_key' => $this->analyzePrimaryKey($metadata),
@@ -34,7 +35,7 @@ class ConstraintAnalyzer
         ];
 
         $this->tableCache[$table] = $analysis;
-        
+
         return $analysis;
     }
 
@@ -45,7 +46,7 @@ class ConstraintAnalyzer
     {
         $compositePk = $metadata['composite_primary_key'];
         $singlePk = $metadata['primary_key'];
-        
+
         $analysis = [
             'type' => count($compositePk) > 1 ? 'composite' : 'single',
             'columns' => $compositePk,
@@ -55,17 +56,17 @@ class ConstraintAnalyzer
         ];
 
         // Check if auto-increment
-        if (!empty($compositePk)) {
+        if (! empty($compositePk)) {
             $columns = $metadata['columns'];
             $pkColumn = collect($columns)->firstWhere('name', $compositePk[0]);
-            
+
             if ($pkColumn) {
                 $analysis['is_auto_increment'] = str_contains(strtolower($pkColumn['extra'] ?? ''), 'auto_increment') ||
                                                  str_contains(strtolower($pkColumn['extra'] ?? ''), 'serial');
-                
+
                 // Check if UUID type
                 $type = strtolower($pkColumn['type']);
-                $analysis['is_uuid'] = str_contains($type, 'uuid') || 
+                $analysis['is_uuid'] = str_contains($type, 'uuid') ||
                                       str_contains($type, 'char(36)') ||
                                       str_contains($type, 'varchar(36)');
             }
@@ -80,7 +81,7 @@ class ConstraintAnalyzer
     protected function analyzeForeignKeys(array $metadata): array
     {
         $foreignKeys = $metadata['foreign_keys'];
-        
+
         return array_map(function ($fk) use ($metadata) {
             return [
                 'column' => $fk['column'],
@@ -102,19 +103,19 @@ class ConstraintAnalyzer
     protected function analyzeIndexes(array $metadata): array
     {
         $indexes = $metadata['indexes'];
-        
+
         return array_map(function ($idx) {
             $columnCount = count($idx['columns']);
-            
+
             return [
                 'name' => $idx['name'],
-                'columns' => array_map(fn($col) => $col['name'], $idx['columns']),
+                'columns' => array_map(fn ($col) => $col['name'], $idx['columns']),
                 'column_count' => $columnCount,
                 'is_composite' => $columnCount > 1,
                 'is_unique' => $idx['unique'],
                 'is_primary' => $idx['primary'],
                 'type' => $idx['type'],
-                'column_order' => array_map(fn($col) => [
+                'column_order' => array_map(fn ($col) => [
                     'column' => $col['name'],
                     'order' => $col['order'] ?? 'ASC',
                 ], $idx['columns']),
@@ -128,10 +129,10 @@ class ConstraintAnalyzer
     protected function analyzeUniqueConstraints(array $metadata): array
     {
         $uniqueConstraints = $metadata['unique_constraints'];
-        
+
         return array_map(function ($constraint) use ($metadata) {
-            $columns = array_map(fn($col) => $col['name'], $constraint['columns']);
-            
+            $columns = array_map(fn ($col) => $col['name'], $constraint['columns']);
+
             return [
                 'name' => $constraint['name'],
                 'columns' => $columns,
@@ -148,6 +149,7 @@ class ConstraintAnalyzer
     protected function isColumnNullable(array $columns, string $columnName): bool
     {
         $column = collect($columns)->firstWhere('name', $columnName);
+
         return $column ? ($column['nullable'] ?? false) : false;
     }
 
@@ -161,6 +163,7 @@ class ConstraintAnalyzer
                 return true;
             }
         }
+
         return false;
     }
 
@@ -170,11 +173,12 @@ class ConstraintAnalyzer
     protected function hasIndexOnColumn(array $indexes, string $columnName): bool
     {
         foreach ($indexes as $index) {
-            $indexColumns = array_map(fn($col) => $col['name'], $index['columns']);
+            $indexColumns = array_map(fn ($col) => $col['name'], $index['columns']);
             if (in_array($columnName, $indexColumns)) {
                 return true;
             }
         }
+
         return false;
     }
 
@@ -184,17 +188,17 @@ class ConstraintAnalyzer
     protected function determineRelationshipType(array $fk, array $metadata): string
     {
         $column = $fk['column'];
-        
+
         // Check if foreign key is unique (one-to-one)
         foreach ($metadata['indexes'] as $index) {
             if ($index['unique']) {
-                $indexColumns = array_map(fn($col) => $col['name'], $index['columns']);
+                $indexColumns = array_map(fn ($col) => $col['name'], $index['columns']);
                 if (count($indexColumns) === 1 && $indexColumns[0] === $column) {
                     return 'one-to-one';
                 }
             }
         }
-        
+
         return 'one-to-many';
     }
 
@@ -206,7 +210,7 @@ class ConstraintAnalyzer
         if ($this->areColumnsNullable($metadata['columns'], $columns)) {
             return 'Consider making columns NOT NULL for stricter uniqueness enforcement';
         }
-        
+
         return null;
     }
 
@@ -216,7 +220,7 @@ class ConstraintAnalyzer
     protected function generateRecommendations(array $metadata): array
     {
         $recommendations = [];
-        
+
         // Check for missing primary key
         if (empty($metadata['composite_primary_key'])) {
             $recommendations[] = [
@@ -229,7 +233,7 @@ class ConstraintAnalyzer
 
         // Check for foreign keys without indexes
         foreach ($metadata['foreign_keys'] as $fk) {
-            if (!$this->hasIndexOnColumn($metadata['indexes'], $fk['column'])) {
+            if (! $this->hasIndexOnColumn($metadata['indexes'], $fk['column'])) {
                 $recommendations[] = [
                     'type' => 'performance',
                     'category' => 'index',
@@ -267,15 +271,15 @@ class ConstraintAnalyzer
     {
         $recommendations = [];
         $indexCount = count($indexes);
-        
+
         for ($i = 0; $i < $indexCount; $i++) {
             for ($j = $i + 1; $j < $indexCount; $j++) {
                 $idx1 = $indexes[$i];
                 $idx2 = $indexes[$j];
-                
-                $cols1 = array_map(fn($col) => $col['name'], $idx1['columns']);
-                $cols2 = array_map(fn($col) => $col['name'], $idx2['columns']);
-                
+
+                $cols1 = array_map(fn ($col) => $col['name'], $idx1['columns']);
+                $cols2 = array_map(fn ($col) => $col['name'], $idx2['columns']);
+
                 // Check if one index is a prefix of another
                 if ($this->isIndexPrefix($cols1, $cols2)) {
                     $recommendations[] = [
@@ -287,7 +291,7 @@ class ConstraintAnalyzer
                 }
             }
         }
-        
+
         return $recommendations;
     }
 
@@ -298,17 +302,17 @@ class ConstraintAnalyzer
     {
         $shorter = count($cols1) < count($cols2) ? $cols1 : $cols2;
         $longer = count($cols1) < count($cols2) ? $cols2 : $cols1;
-        
+
         if (count($shorter) === count($longer)) {
             return false;
         }
-        
+
         for ($i = 0; $i < count($shorter); $i++) {
             if ($shorter[$i] !== $longer[$i]) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -330,18 +334,18 @@ class ConstraintAnalyzer
 
         foreach ($tables as $table) {
             $analysis = $this->analyzeTable($table);
-            
-            if (!empty($analysis['primary_key']['columns'])) {
+
+            if (! empty($analysis['primary_key']['columns'])) {
                 $summary['tables_with_pk']++;
             } else {
                 $summary['tables_without_pk']++;
             }
-            
+
             $summary['total_foreign_keys'] += count($analysis['foreign_keys']);
             $summary['total_indexes'] += count($analysis['indexes']);
             $summary['total_unique_constraints'] += count($analysis['unique_constraints']);
-            
-            if (!empty($analysis['recommendations'])) {
+
+            if (! empty($analysis['recommendations'])) {
                 $summary['tables_with_issues']++;
                 $summary['all_recommendations'][$table] = $analysis['recommendations'];
             }
@@ -359,10 +363,10 @@ class ConstraintAnalyzer
 
         foreach ($tables as $table) {
             $metadata = $this->inspector->getTableMetadata($table);
-            
+
             foreach ($metadata['foreign_keys'] as $fk) {
                 // Check if referenced table exists
-                if (!in_array($fk['referenced_table'], $tables)) {
+                if (! in_array($fk['referenced_table'], $tables)) {
                     $issues[] = [
                         'table' => $table,
                         'type' => 'missing_referenced_table',
@@ -371,13 +375,13 @@ class ConstraintAnalyzer
                         'message' => "Foreign key references non-existent table '{$fk['referenced_table']}'",
                     ];
                 }
-                
+
                 // Check if referenced column exists
                 if (in_array($fk['referenced_table'], $tables)) {
                     $referencedColumns = $this->inspector->getColumns($fk['referenced_table']);
                     $referencedColumnNames = array_column($referencedColumns, 'name');
-                    
-                    if (!in_array($fk['referenced_column'], $referencedColumnNames)) {
+
+                    if (! in_array($fk['referenced_column'], $referencedColumnNames)) {
                         $issues[] = [
                             'table' => $table,
                             'type' => 'missing_referenced_column',

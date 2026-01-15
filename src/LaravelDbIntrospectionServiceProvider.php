@@ -2,7 +2,6 @@
 
 namespace Zuqongtech\LaravelDbIntrospection;
 
-
 use Illuminate\Support\ServiceProvider;
 use Zuqongtech\LaravelDbIntrospection\Console\GenerateModelsFromDatabase;
 
@@ -18,7 +17,7 @@ class LaravelDbIntrospectionServiceProvider extends ServiceProvider
 
             // Publish config
             $this->publishes([
-                __DIR__ . '/../config/zt-introspection.php' => config_path('zt-introspection.php'),
+                __DIR__.'/../config/zt-introspection.php' => config_path('zt-introspection.php'),
             ], 'config');
         }
     }
@@ -27,7 +26,7 @@ class LaravelDbIntrospectionServiceProvider extends ServiceProvider
     {
         // Merge default config
         $this->mergeConfigFrom(
-            __DIR__ . '/../config/zt-introspection.php',
+            __DIR__.'/../config/zt-introspection.php',
             'zt-introspection'
         );
     }

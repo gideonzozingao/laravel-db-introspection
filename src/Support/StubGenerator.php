@@ -5,7 +5,7 @@ namespace Zuqongtech\LaravelDbIntrospection\Support;
 class StubGenerator
 {
     protected array $replacements = [];
-    
+
     public function __construct(array $replacements = [])
     {
         $this->replacements = $replacements;
@@ -17,6 +17,7 @@ class StubGenerator
     public function addReplacement(string $key, string $value): self
     {
         $this->replacements[$key] = $value;
+
         return $this;
     }
 
@@ -26,6 +27,7 @@ class StubGenerator
     public function addReplacements(array $replacements): self
     {
         $this->replacements = array_merge($this->replacements, $replacements);
+
         return $this;
     }
 
@@ -35,11 +37,11 @@ class StubGenerator
     public function generate(): string
     {
         $stub = $this->getModelStub();
-        
+
         foreach ($this->replacements as $key => $value) {
             $stub = str_replace("{{$key}}", $value, $stub);
         }
-        
+
         return $stub;
     }
 
@@ -100,19 +102,19 @@ STUB;
         }
 
         $params = "'{$relatedModel}'";
-        
+
         if ($foreignKey) {
             $params .= ", '{$foreignKey}'";
         }
-        
+
         if ($localKey) {
             $params .= ", '{$localKey}'";
         }
 
-        return $docBlock . "    public function {$methodName}()\n" .
-               "    {\n" .
-               "        return \$this->{$type}({$params});\n" .
-               "    }";
+        return $docBlock."    public function {$methodName}()\n".
+               "    {\n".
+               "        return \$this->{$type}({$params});\n".
+               '    }';
     }
 
     /**
@@ -126,20 +128,20 @@ STUB;
 
         $indentation = str_repeat('    ', $indent);
         $innerIndent = str_repeat('    ', $indent + 1);
-        
+
         $stub = "\n{$indentation}/**\n";
         $stub .= "{$indentation} * The attributes that are mass assignable.\n";
         $stub .= "{$indentation} *\n";
         $stub .= "{$indentation} * @var array<int, string>\n";
         $stub .= "{$indentation} */\n";
         $stub .= "{$indentation}protected \$fillable = [\n";
-        
+
         foreach ($columns as $column) {
             $stub .= "{$innerIndent}'{$column}',\n";
         }
-        
+
         $stub .= "{$indentation}];";
-        
+
         return $stub;
     }
 
@@ -154,20 +156,20 @@ STUB;
 
         $indentation = str_repeat('    ', $indent);
         $innerIndent = str_repeat('    ', $indent + 1);
-        
+
         $stub = "\n{$indentation}/**\n";
         $stub .= "{$indentation} * The attributes that should be hidden for serialization.\n";
         $stub .= "{$indentation} *\n";
         $stub .= "{$indentation} * @var array<int, string>\n";
         $stub .= "{$indentation} */\n";
         $stub .= "{$indentation}protected \$hidden = [\n";
-        
+
         foreach ($columns as $column) {
             $stub .= "{$innerIndent}'{$column}',\n";
         }
-        
+
         $stub .= "{$indentation}];";
-        
+
         return $stub;
     }
 
@@ -182,20 +184,20 @@ STUB;
 
         $indentation = str_repeat('    ', $indent);
         $innerIndent = str_repeat('    ', $indent + 1);
-        
+
         $stub = "\n{$indentation}/**\n";
         $stub .= "{$indentation} * The attributes that should be cast.\n";
         $stub .= "{$indentation} *\n";
         $stub .= "{$indentation} * @var array<string, string>\n";
         $stub .= "{$indentation} */\n";
         $stub .= "{$indentation}protected \$casts = [\n";
-        
+
         foreach ($casts as $column => $cast) {
             $stub .= "{$innerIndent}'{$column}' => '{$cast}',\n";
         }
-        
+
         $stub .= "{$indentation}];";
-        
+
         return $stub;
     }
 
@@ -210,20 +212,20 @@ STUB;
 
         $indentation = str_repeat('    ', $indent);
         $innerIndent = str_repeat('    ', $indent + 1);
-        
+
         $stub = "\n{$indentation}/**\n";
         $stub .= "{$indentation} * The attributes that should be mutated to dates.\n";
         $stub .= "{$indentation} *\n";
         $stub .= "{$indentation} * @var array<int, string>\n";
         $stub .= "{$indentation} */\n";
         $stub .= "{$indentation}protected \$dates = [\n";
-        
+
         foreach ($dates as $date) {
             $stub .= "{$innerIndent}'{$date}',\n";
         }
-        
+
         $stub .= "{$indentation}];";
-        
+
         return $stub;
     }
 
@@ -233,21 +235,22 @@ STUB;
     public static function classDocBlock(array $properties, array $methods): string
     {
         $lines = [];
-        
-        if (!empty($properties)) {
+
+        if (! empty($properties)) {
             foreach ($properties as $property) {
                 $type = $property['type'] ?? 'mixed';
                 $name = $property['name'];
                 $comment = $property['comment'] ?? null;
-                
+
                 // Skip empty property definitions (used for table comments)
                 if (empty($type) && empty($name)) {
                     if ($comment) {
                         $lines[] = $comment;
                     }
+
                     continue;
                 }
-                
+
                 if ($comment) {
                     $lines[] = "@property {$type} \${$name} {$comment}";
                 } else {
@@ -255,17 +258,17 @@ STUB;
                 }
             }
         }
-        
-        if (!empty($properties) && !empty($methods)) {
+
+        if (! empty($properties) && ! empty($methods)) {
             $lines[] = '';
         }
-        
-        if (!empty($methods)) {
+
+        if (! empty($methods)) {
             foreach ($methods as $method) {
                 $return = $method['return'] ?? 'mixed';
                 $name = $method['name'];
                 $comment = $method['comment'] ?? null;
-                
+
                 if ($comment) {
                     $lines[] = "@method {$return} {$name}() {$comment}";
                 } else {
@@ -273,11 +276,11 @@ STUB;
                 }
             }
         }
-        
+
         if (empty($lines)) {
             return '';
         }
-        
+
         return Helpers::formatDocBlock($lines, 0);
     }
 
@@ -292,12 +295,12 @@ STUB;
         }
 
         $indentation = str_repeat('    ', $indent);
-        
-        return "\n{$indentation}/**\n" .
-               "{$indentation} * The primary key for the model.\n" .
-               "{$indentation} *\n" .
-               "{$indentation} * @var string\n" .
-               "{$indentation} */\n" .
+
+        return "\n{$indentation}/**\n".
+               "{$indentation} * The primary key for the model.\n".
+               "{$indentation} *\n".
+               "{$indentation} * @var string\n".
+               "{$indentation} */\n".
                "{$indentation}protected \$primaryKey = '{$primaryKey}';";
     }
 
@@ -311,12 +314,12 @@ STUB;
         }
 
         $indentation = str_repeat('    ', $indent);
-        
-        return "\n{$indentation}/**\n" .
-               "{$indentation} * Indicates if the model should be timestamped.\n" .
-               "{$indentation} *\n" .
-               "{$indentation} * @var bool\n" .
-               "{$indentation} */\n" .
+
+        return "\n{$indentation}/**\n".
+               "{$indentation} * Indicates if the model should be timestamped.\n".
+               "{$indentation} *\n".
+               "{$indentation} * @var bool\n".
+               "{$indentation} */\n".
                "{$indentation}public \$timestamps = false;";
     }
 
