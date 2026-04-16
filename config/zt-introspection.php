@@ -275,7 +275,7 @@ return [
     */
 
     'relationships' => [
-        
+
         // Detect belongsTo from foreign keys
         'detect_belongs_to' => env('DB_INTROSPECTION_BELONGS_TO', true),
 
@@ -312,7 +312,7 @@ return [
     */
 
     'naming' => [
-        
+
         // Convert table names to singular for model names
         'singular_models' => true,
 
@@ -348,7 +348,7 @@ return [
     */
 
     'fillable' => [
-        
+
         // Generation strategy: 'auto', 'all', 'none', 'blacklist'
         'strategy' => env('DB_INTROSPECTION_FILLABLE_STRATEGY', 'auto'),
 
@@ -377,7 +377,7 @@ return [
     */
 
     'code_style' => [
-        
+
         // Number of spaces for indentation
         'indent_spaces' => 4,
 
@@ -422,7 +422,7 @@ return [
     */
 
     'performance' => [
-        
+
         // Cache database schema for subsequent runs (in seconds, 0 = disabled)
         'cache_schema' => env('DB_INTROSPECTION_CACHE', 0),
 
@@ -452,7 +452,7 @@ return [
     */
 
     'advanced' => [
-        
+
         // Generate model events (creating, created, updating, etc.)
         'generate_events' => false,
 
@@ -491,7 +491,7 @@ return [
     */
 
     'validation' => [
-        
+
         // Validate model names are valid PHP class names
         'validate_class_names' => true,
 
@@ -527,7 +527,7 @@ return [
     */
 
     'output' => [
-        
+
         // Verbosity level: 'quiet', 'normal', 'verbose', 'debug'
         'verbosity' => env('DB_INTROSPECTION_VERBOSITY', 'normal'),
 
@@ -598,7 +598,7 @@ return [
     */
 
     'hooks' => [
-        
+
         // Called before model generation starts
         'before_generation' => null,
 
@@ -613,5 +613,46 @@ return [
 
         // Custom file name resolver
         'filename_resolver' => null,
+    ],
+
+    'custom_generators' => [
+        // Example: App\Generators\CustomApiDocGenerator::class,
+    ],
+
+    /*
+|--------------------------------------------------------------------------
+| Generator-Specific Settings
+|--------------------------------------------------------------------------
+|
+| Configure individual generator behavior
+|
+*/
+
+    'generators' => [
+        'controllers' => [
+            'namespace' => 'App\\Http\\Controllers',
+            'base_controller' => 'App\\Http\\Controllers\\Controller',
+            'use_resource_controllers' => true,
+            'include_validation' => true,
+        ],
+
+        'resources' => [
+            'namespace' => 'App\\Http\\Resources',
+            'exclude_fields' => ['password', 'remember_token', 'api_token', 'secret'],
+            'include_relationships' => true,
+        ],
+
+        'observers' => [
+            'namespace' => 'App\\Observers',
+            'auto_register' => false, // Set to true to auto-register in AppServiceProvider
+            'include_soft_delete_events' => true,
+        ],
+
+        'policies' => [
+            'namespace' => 'App\\Policies',
+            'auto_register' => false, // Set to true to auto-register in AuthServiceProvider
+            'detect_ownership' => true, // Auto-detect user_id for ownership rules
+            'ownership_column' => 'user_id',
+        ],
     ],
 ];

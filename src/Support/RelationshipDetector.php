@@ -5,7 +5,9 @@ namespace Zuqongtech\LaravelDbIntrospection\Support;
 class RelationshipDetector
 {
     protected DatabaseInspector $inspector;
+
     protected array $allTables = [];
+
     protected array $foreignKeyMap = [];
 
     public function __construct(DatabaseInspector $inspector)
@@ -40,7 +42,7 @@ class RelationshipDetector
                 if ($fk['referenced_table'] === $table) {
                     $modelName = Helpers::tableToModelName($sourceTable);
                     $methodName = Helpers::getInverseRelationName($modelName);
-                    
+
                     $inverseRelations[] = [
                         'method' => $methodName,
                         'model' => $modelName,
@@ -63,7 +65,7 @@ class RelationshipDetector
     {
         // Check if the foreign key is unique
         $indexes = $this->inspector->getIndexes($sourceTable);
-        
+
         foreach ($indexes as $index) {
             if ($index['unique'] && $index['column'] === $foreignKey) {
                 return true;
@@ -79,18 +81,18 @@ class RelationshipDetector
     public function detectManyToMany(string $table): array
     {
         $manyToMany = [];
-        
+
         // A pivot table typically:
         // 1. Has exactly 2 foreign keys
         // 2. May have additional columns like timestamps
         // 3. Often named as model1_model2
-        
+
         $foreignKeys = $this->foreignKeyMap[$table] ?? [];
-        
+
         if (count($foreignKeys) === 2) {
             $columns = $this->inspector->getColumns($table);
             $nonForeignColumns = [];
-            
+
             foreach ($columns as $column) {
                 $isForeign = false;
                 foreach ($foreignKeys as $fk) {
@@ -99,13 +101,13 @@ class RelationshipDetector
                         break;
                     }
                 }
-                
+
                 // Count columns that aren't foreign keys and aren't timestamps
-                if (!$isForeign && !Helpers::isTimestampColumn($column['name'])) {
+                if (! $isForeign && ! Helpers::isTimestampColumn($column['name'])) {
                     $nonForeignColumns[] = $column['name'];
                 }
             }
-            
+
             // If there are minimal additional columns, it's likely a pivot
             if (count($nonForeignColumns) <= 2) {
                 $manyToMany = [
@@ -132,7 +134,7 @@ class RelationshipDetector
 
         foreach ($this->allTables as $table) {
             $manyToMany = $this->detectManyToMany($table);
-            if (!empty($manyToMany)) {
+            if (! empty($manyToMany)) {
                 $pivotTables[] = $manyToMany;
             }
         }
@@ -153,8 +155,8 @@ class RelationshipDetector
         foreach ($columnNames as $columnName) {
             if (str_ends_with($columnName, '_type')) {
                 $prefix = substr($columnName, 0, -5);
-                $idColumn = $prefix . '_id';
-                
+                $idColumn = $prefix.'_id';
+
                 if (in_array($idColumn, $columnNames)) {
                     $polymorphic[] = [
                         'name' => $prefix,
@@ -187,7 +189,7 @@ class RelationshipDetector
     public function determineCardinality(string $sourceTable, string $targetTable): string
     {
         $foreignKeys = $this->foreignKeyMap[$sourceTable] ?? [];
-        
+
         foreach ($foreignKeys as $fk) {
             if ($fk['referenced_table'] === $targetTable) {
                 return $this->shouldBeHasOne($sourceTable, $fk['column']) ? 'one' : 'many';
@@ -203,7 +205,8 @@ class RelationshipDetector
     public function isPivotTable(string $table): bool
     {
         $manyToMany = $this->detectManyToMany($table);
-        return !empty($manyToMany);
+
+        return ! empty($manyToMany);
     }
 
     /**
@@ -226,7 +229,7 @@ class RelationshipDetector
         foreach ($this->foreignKeyMap as $table => $foreignKeys) {
             foreach ($foreignKeys as $fk) {
                 // Check if referenced table exists
-                if (!in_array($fk['referenced_table'], $this->allTables)) {
+                if (! in_array($fk['referenced_table'], $this->allTables)) {
                     $issues[] = [
                         'table' => $table,
                         'column' => $fk['column'],
@@ -238,8 +241,8 @@ class RelationshipDetector
                 // Check if referenced column exists
                 $referencedColumns = $this->inspector->getColumns($fk['referenced_table']);
                 $referencedColumnNames = array_column($referencedColumns, 'name');
-                
-                if (!in_array($fk['referenced_column'], $referencedColumnNames)) {
+
+                if (! in_array($fk['referenced_column'], $referencedColumnNames)) {
                     $issues[] = [
                         'table' => $table,
                         'column' => $fk['column'],

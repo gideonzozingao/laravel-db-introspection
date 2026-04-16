@@ -5,19 +5,33 @@ namespace Zuqongtech\LaravelDbIntrospection\Support;
 class ModelBuilder
 {
     protected string $tableName;
+
     protected string $namespace;
+
     protected array $columns = [];
+
     protected array $foreignKeys = [];
+
     protected array $indexes = [];
+
     protected array $uniqueConstraints = [];
+
     protected ?string $primaryKey = 'id';
+
     protected array $compositePrimaryKey = [];
+
     protected bool $timestamps = true;
+
     protected bool $softDeletes = false;
+
     protected bool $withPhpDoc = true;
+
     protected bool $withInverse = true;
+
     protected bool $withConstraintComments = false;
+
     protected array $inverseRelationships = [];
+
     protected ?array $constraintAnalysis = null;
 
     public function __construct(string $tableName, string $namespace)
@@ -32,6 +46,7 @@ class ModelBuilder
     public function setColumns(array $columns): self
     {
         $this->columns = $columns;
+
         return $this;
     }
 
@@ -41,6 +56,7 @@ class ModelBuilder
     public function setForeignKeys(array $foreignKeys): self
     {
         $this->foreignKeys = $foreignKeys;
+
         return $this;
     }
 
@@ -50,6 +66,7 @@ class ModelBuilder
     public function setIndexes(array $indexes): self
     {
         $this->indexes = $indexes;
+
         return $this;
     }
 
@@ -59,6 +76,7 @@ class ModelBuilder
     public function setUniqueConstraints(array $uniqueConstraints): self
     {
         $this->uniqueConstraints = $uniqueConstraints;
+
         return $this;
     }
 
@@ -68,6 +86,7 @@ class ModelBuilder
     public function setPrimaryKey(?string $primaryKey): self
     {
         $this->primaryKey = $primaryKey;
+
         return $this;
     }
 
@@ -77,6 +96,7 @@ class ModelBuilder
     public function setCompositePrimaryKey(array $compositePrimaryKey): self
     {
         $this->compositePrimaryKey = $compositePrimaryKey;
+
         return $this;
     }
 
@@ -86,6 +106,7 @@ class ModelBuilder
     public function setTimestamps(bool $timestamps): self
     {
         $this->timestamps = $timestamps;
+
         return $this;
     }
 
@@ -95,6 +116,7 @@ class ModelBuilder
     public function setSoftDeletes(bool $softDeletes): self
     {
         $this->softDeletes = $softDeletes;
+
         return $this;
     }
 
@@ -104,6 +126,7 @@ class ModelBuilder
     public function setWithPhpDoc(bool $withPhpDoc): self
     {
         $this->withPhpDoc = $withPhpDoc;
+
         return $this;
     }
 
@@ -113,6 +136,7 @@ class ModelBuilder
     public function setWithInverse(bool $withInverse): self
     {
         $this->withInverse = $withInverse;
+
         return $this;
     }
 
@@ -122,6 +146,7 @@ class ModelBuilder
     public function setWithConstraintComments(bool $withConstraintComments): self
     {
         $this->withConstraintComments = $withConstraintComments;
+
         return $this;
     }
 
@@ -131,6 +156,7 @@ class ModelBuilder
     public function setConstraintAnalysis(?array $constraintAnalysis): self
     {
         $this->constraintAnalysis = $constraintAnalysis;
+
         return $this;
     }
 
@@ -144,6 +170,7 @@ class ModelBuilder
             'model' => $relatedModel,
             'foreign_key' => $foreignKey,
         ];
+
         return $this;
     }
 
@@ -189,7 +216,7 @@ class ModelBuilder
     protected function buildUses(): string
     {
         $uses = [];
-        
+
         if ($this->softDeletes) {
             $uses[] = 'Illuminate\Database\Eloquent\SoftDeletes';
         }
@@ -218,9 +245,9 @@ class ModelBuilder
         foreach ($this->columns as $column) {
             $phpType = Helpers::mapDatabaseTypeToPhp($column['type']);
             $phpType = Helpers::isNullableType($phpType, $column['nullable']);
-            
+
             $comment = $column['comment'] ?: null;
-            
+
             // Add constraint information to comment
             if ($this->withConstraintComments) {
                 $constraintInfo = $this->getColumnConstraintInfo($column['name']);
@@ -228,7 +255,7 @@ class ModelBuilder
                     $comment = $comment ? "{$comment} ({$constraintInfo})" : $constraintInfo;
                 }
             }
-            
+
             $properties[] = [
                 'type' => $phpType,
                 'name' => $column['name'],
@@ -240,7 +267,7 @@ class ModelBuilder
         foreach ($this->foreignKeys as $fk) {
             $methodName = Helpers::foreignKeyToRelationName($fk['column']);
             $relatedModel = Helpers::tableToModelName($fk['referenced_table']);
-            
+
             $methods[] = [
                 'return' => "\\{$this->namespace}\\{$relatedModel}",
                 'name' => $methodName,
@@ -281,7 +308,7 @@ class ModelBuilder
 
         // Check if unique
         foreach ($this->uniqueConstraints as $constraint) {
-            $constraintColumns = array_map(fn($col) => $col['name'], $constraint['columns']);
+            $constraintColumns = array_map(fn ($col) => $col['name'], $constraint['columns']);
             if (in_array($columnName, $constraintColumns)) {
                 $info[] = 'UNIQUE';
                 break;
@@ -290,8 +317,8 @@ class ModelBuilder
 
         // Check if indexed
         foreach ($this->indexes as $index) {
-            if (!$index['primary'] && !$index['unique']) {
-                $indexColumns = array_map(fn($col) => $col['name'], $index['columns']);
+            if (! $index['primary'] && ! $index['unique']) {
+                $indexColumns = array_map(fn ($col) => $col['name'], $index['columns']);
                 if (in_array($columnName, $indexColumns)) {
                     $info[] = 'INDEXED';
                     break;
@@ -299,7 +326,7 @@ class ModelBuilder
             }
         }
 
-        return !empty($info) ? implode(', ', $info) : null;
+        return ! empty($info) ? implode(', ', $info) : null;
     }
 
     /**
@@ -311,18 +338,18 @@ class ModelBuilder
         if (count($this->compositePrimaryKey) > 1) {
             $indent = '    ';
             $innerIndent = '        ';
-            
+
             $stub = "\n{$indent}/**\n";
             $stub .= "{$indent} * The primary key for the model.\n";
             $stub .= "{$indent} *\n";
             $stub .= "{$indent} * @var array<int, string>\n";
             $stub .= "{$indent} */\n";
             $stub .= "{$indent}protected \$primaryKey = [\n";
-            
+
             foreach ($this->compositePrimaryKey as $column) {
                 $stub .= "{$innerIndent}'{$column}',\n";
             }
-            
+
             $stub .= "{$indent}];\n\n";
             $stub .= "{$indent}/**\n";
             $stub .= "{$indent} * Indicates if the IDs are auto-incrementing.\n";
@@ -330,7 +357,7 @@ class ModelBuilder
             $stub .= "{$indent} * @var bool\n";
             $stub .= "{$indent} */\n";
             $stub .= "{$indent}public \$incrementing = false;";
-            
+
             return $stub;
         }
 
@@ -343,10 +370,10 @@ class ModelBuilder
     protected function buildFillable(): string
     {
         $fillable = [];
-        
+
         foreach ($this->columns as $column) {
             $columnName = $column['name'];
-            
+
             // Skip primary key, timestamps, and auto-increment columns
             if (
                 in_array($columnName, $this->compositePrimaryKey) ||
@@ -356,7 +383,7 @@ class ModelBuilder
             ) {
                 continue;
             }
-            
+
             $fillable[] = $columnName;
         }
 
@@ -369,10 +396,10 @@ class ModelBuilder
     protected function buildHidden(): string
     {
         $hidden = [];
-        
+
         foreach ($this->columns as $column) {
             $columnName = $column['name'];
-            
+
             // Hide password and remember_token columns
             if (in_array($columnName, ['password', 'remember_token'])) {
                 $hidden[] = $columnName;
@@ -388,12 +415,12 @@ class ModelBuilder
     protected function buildCasts(): string
     {
         $casts = [];
-        
+
         foreach ($this->columns as $column) {
             $columnName = $column['name'];
             $castType = Helpers::getCastType($column['type']);
-            
-            if ($castType && !Helpers::isTimestampColumn($columnName)) {
+
+            if ($castType && ! Helpers::isTimestampColumn($columnName)) {
                 $casts[$columnName] = $castType;
             }
         }
@@ -420,7 +447,7 @@ class ModelBuilder
      */
     protected function buildConstraintComments(): string
     {
-        if (!$this->constraintAnalysis) {
+        if (! $this->constraintAnalysis) {
             return '';
         }
 
@@ -428,15 +455,15 @@ class ModelBuilder
         $indent = '    ';
 
         // Primary Key info
-        if (!empty($this->constraintAnalysis['primary_key']['columns'])) {
+        if (! empty($this->constraintAnalysis['primary_key']['columns'])) {
             $pkType = $this->constraintAnalysis['primary_key']['type'];
             $pkCols = implode(', ', $this->constraintAnalysis['primary_key']['columns']);
             $comments[] = "Primary Key: {$pkCols} ({$pkType})";
         }
 
         // Foreign Keys
-        if (!empty($this->constraintAnalysis['foreign_keys'])) {
-            $comments[] = "Foreign Keys:";
+        if (! empty($this->constraintAnalysis['foreign_keys'])) {
+            $comments[] = 'Foreign Keys:';
             foreach ($this->constraintAnalysis['foreign_keys'] as $fk) {
                 $ref = $fk['references'];
                 $comments[] = "  - {$fk['column']} -> {$ref['table']}.{$ref['column']}";
@@ -444,8 +471,8 @@ class ModelBuilder
         }
 
         // Unique Constraints
-        if (!empty($this->constraintAnalysis['unique_constraints'])) {
-            $comments[] = "Unique Constraints:";
+        if (! empty($this->constraintAnalysis['unique_constraints'])) {
+            $comments[] = 'Unique Constraints:';
             foreach ($this->constraintAnalysis['unique_constraints'] as $constraint) {
                 $cols = implode(', ', $constraint['columns']);
                 $comments[] = "  - {$constraint['name']}: ({$cols})";
@@ -453,9 +480,9 @@ class ModelBuilder
         }
 
         // Indexes
-        $nonUniqueIndexes = array_filter($this->constraintAnalysis['indexes'], fn($idx) => !$idx['is_unique'] && !$idx['is_primary']);
-        if (!empty($nonUniqueIndexes)) {
-            $comments[] = "Indexes:";
+        $nonUniqueIndexes = array_filter($this->constraintAnalysis['indexes'], fn ($idx) => ! $idx['is_unique'] && ! $idx['is_primary']);
+        if (! empty($nonUniqueIndexes)) {
+            $comments[] = 'Indexes:';
             foreach ($nonUniqueIndexes as $index) {
                 $cols = implode(', ', $index['columns']);
                 $comments[] = "  - {$index['name']}: ({$cols})";
@@ -468,7 +495,7 @@ class ModelBuilder
 
         $stub = "\n{$indent}/*\n";
         $stub .= "{$indent} * Database Constraints\n";
-        $stub .= "{$indent} * " . str_repeat('-', 50) . "\n";
+        $stub .= "{$indent} * ".str_repeat('-', 50)."\n";
         foreach ($comments as $comment) {
             $stub .= "{$indent} * {$comment}\n";
         }
@@ -488,8 +515,8 @@ class ModelBuilder
         foreach ($this->foreignKeys as $fk) {
             $methodName = Helpers::foreignKeyToRelationName($fk['column']);
             $relatedModel = Helpers::tableToModelName($fk['referenced_table']);
-            $fullRelatedModel = $this->namespace . '\\' . $relatedModel;
-            
+            $fullRelatedModel = $this->namespace.'\\'.$relatedModel;
+
             $relationships[] = StubGenerator::relationshipStub(
                 'belongsTo',
                 $methodName,
@@ -503,8 +530,8 @@ class ModelBuilder
         // Build hasMany/hasOne inverse relationships
         if ($this->withInverse) {
             foreach ($this->inverseRelationships as $inverse) {
-                $fullRelatedModel = $this->namespace . '\\' . $inverse['model'];
-                
+                $fullRelatedModel = $this->namespace.'\\'.$inverse['model'];
+
                 $relationships[] = StubGenerator::relationshipStub(
                     'hasMany',
                     $inverse['method'],
@@ -520,7 +547,7 @@ class ModelBuilder
             return '';
         }
 
-        return "\n" . implode("\n\n", $relationships) . "\n";
+        return "\n".implode("\n\n", $relationships)."\n";
     }
 
     /**
@@ -536,6 +563,6 @@ class ModelBuilder
      */
     public function getFullModelClass(): string
     {
-        return $this->namespace . '\\' . $this->getModelName();
+        return $this->namespace.'\\'.$this->getModelName();
     }
 }

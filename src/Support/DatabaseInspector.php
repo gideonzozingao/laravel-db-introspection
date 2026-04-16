@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Schema;
 class DatabaseInspector
 {
     protected string $connectionName;
+
     protected $connection;
+
     protected string $driver;
 
     public function __construct(?string $connectionName = null)
@@ -41,7 +43,7 @@ class DatabaseInspector
     {
         $tables = match ($this->driver) {
             'mysql' => collect($this->connection->select('SHOW TABLES'))
-                ->map(fn($t) => array_values((array)$t)[0])
+                ->map(fn ($t) => array_values((array) $t)[0])
                 ->toArray(),
 
             'pgsql' => collect($this->connection->select("
@@ -94,8 +96,8 @@ class DatabaseInspector
     protected function getMysqlColumns(string $table): array
     {
         $columns = $this->connection->select("SHOW FULL COLUMNS FROM `{$table}`");
-        
-        return array_map(fn($col) => [
+
+        return array_map(fn ($col) => [
             'name' => $col->Field,
             'type' => $col->Type,
             'nullable' => $col->Null === 'YES',
@@ -128,7 +130,7 @@ class DatabaseInspector
             ORDER BY ordinal_position
         ", [$table]);
 
-        return array_map(fn($col) => [
+        return array_map(fn ($col) => [
             'name' => $col->column_name,
             'type' => $col->data_type,
             'udt_name' => $col->udt_name,
@@ -150,7 +152,7 @@ class DatabaseInspector
     {
         $columns = $this->connection->select("PRAGMA table_info(`{$table}`)");
 
-        return array_map(fn($col) => [
+        return array_map(fn ($col) => [
             'name' => $col->name,
             'type' => $col->type,
             'nullable' => $col->notnull == 0,
@@ -184,7 +186,7 @@ class DatabaseInspector
             ORDER BY c.ORDINAL_POSITION
         ", [$table]);
 
-        return array_map(fn($col) => [
+        return array_map(fn ($col) => [
             'name' => $col->column_name,
             'type' => $col->data_type,
             'nullable' => $col->is_nullable === 'YES',
@@ -206,12 +208,12 @@ class DatabaseInspector
                     SHOW KEYS FROM `{$table}` WHERE Key_name = 'PRIMARY'
                 "))->pluck('Column_name')->first(),
 
-                'pgsql' => $this->connection->selectOne("
+                'pgsql' => $this->connection->selectOne('
                     SELECT a.attname
                     FROM pg_index i
                     JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
                     WHERE i.indrelid = ?::regclass AND i.indisprimary
-                ", [$table])->attname ?? null,
+                ', [$table])->attname ?? null,
 
                 'sqlite' => collect($this->connection->select("PRAGMA table_info(`{$table}`)"))
                     ->where('pk', 1)
@@ -246,13 +248,13 @@ class DatabaseInspector
                     ORDER BY Seq_in_index
                 "))->pluck('Column_name')->toArray(),
 
-                'pgsql' => collect($this->connection->select("
+                'pgsql' => collect($this->connection->select('
                     SELECT a.attname
                     FROM pg_index i
                     JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
                     WHERE i.indrelid = ?::regclass AND i.indisprimary
                     ORDER BY array_position(i.indkey, a.attnum)
-                ", [$table]))->pluck('attname')->toArray(),
+                ', [$table]))->pluck('attname')->toArray(),
 
                 'sqlite' => collect($this->connection->select("PRAGMA table_info(`{$table}`)"))
                     ->where('pk', '>', 0)
@@ -283,7 +285,7 @@ class DatabaseInspector
     public function getForeignKeys(string $table): array
     {
         $foreignKeys = match ($this->driver) {
-            'mysql' => $this->connection->select("
+            'mysql' => $this->connection->select('
                 SELECT
                     COLUMN_NAME as column_name,
                     REFERENCED_TABLE_NAME as referenced_table_name,
@@ -293,7 +295,7 @@ class DatabaseInspector
                 WHERE TABLE_SCHEMA = DATABASE()
                 AND TABLE_NAME = ?
                 AND REFERENCED_TABLE_NAME IS NOT NULL
-            ", [$table]),
+            ', [$table]),
 
             'pgsql' => $this->connection->select("
                 SELECT
@@ -313,7 +315,7 @@ class DatabaseInspector
             ", [$table]),
 
             'sqlite' => collect($this->connection->select("PRAGMA foreign_key_list(`{$table}`)"))
-                ->map(fn($fk) => (object)[
+                ->map(fn ($fk) => (object) [
                     'column_name' => $fk->from,
                     'referenced_table_name' => $fk->table,
                     'referenced_column_name' => $fk->to,
@@ -321,7 +323,7 @@ class DatabaseInspector
                 ])
                 ->toArray(),
 
-            'sqlsrv' => $this->connection->select("
+            'sqlsrv' => $this->connection->select('
                 SELECT
                     fkc.COLUMN_NAME AS column_name,
                     pk.TABLE_NAME AS referenced_table_name,
@@ -337,12 +339,12 @@ class DatabaseInspector
                 JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS pkc 
                     ON pk.CONSTRAINT_NAME = pkc.CONSTRAINT_NAME
                 WHERE fk.TABLE_NAME = ?
-            ", [$table]),
+            ', [$table]),
 
             default => [],
         };
 
-        return array_map(fn($fk) => [
+        return array_map(fn ($fk) => [
             'column' => $fk->column_name,
             'referenced_table' => $fk->referenced_table_name,
             'referenced_column' => $fk->referenced_column_name,
@@ -372,12 +374,12 @@ class DatabaseInspector
     protected function getMysqlIndexes(string $table): array
     {
         $rawIndexes = $this->connection->select("SHOW INDEX FROM `{$table}`");
-        
+
         $grouped = [];
         foreach ($rawIndexes as $idx) {
             $name = $idx->Key_name;
-            
-            if (!isset($grouped[$name])) {
+
+            if (! isset($grouped[$name])) {
                 $grouped[$name] = [
                     'name' => $name,
                     'columns' => [],
@@ -386,23 +388,23 @@ class DatabaseInspector
                     'type' => $idx->Index_type,
                 ];
             }
-            
+
             $grouped[$name]['columns'][] = [
                 'name' => $idx->Column_name,
                 'order' => $idx->Collation === 'D' ? 'DESC' : 'ASC',
                 'length' => $idx->Sub_part,
             ];
         }
-        
+
         return array_values($grouped);
     }
 
     /**
- * Get PostgreSQL indexes
- */
-protected function getPostgresIndexes(string $table): array
-{
-    $rawIndexes = $this->connection->select("
+     * Get PostgreSQL indexes
+     */
+    protected function getPostgresIndexes(string $table): array
+    {
+        $rawIndexes = $this->connection->select('
         SELECT
             i.relname as index_name,
             array_agg(a.attname ORDER BY array_position(ix.indkey, a.attnum)) as columns,
@@ -416,32 +418,32 @@ protected function getPostgresIndexes(string $table): array
         JOIN pg_am am ON i.relam = am.oid
         WHERE t.relname = ?
         GROUP BY i.relname, ix.indisunique, ix.indisprimary, am.amname
-    ", [$table]);
-    
-    return array_map(function($idx) {
-        // Convert PostgreSQL array string to PHP array
-        $columns = $idx->columns;
-        
-        // Handle PostgreSQL array format: {col1,col2,col3}
-        if (is_string($columns)) {
-            $columns = trim($columns, '{}');
-            $columns = $columns ? explode(',', $columns) : [];
-        }
-        
-        // Ensure it's an array
-        if (!is_array($columns)) {
-            $columns = [];
-        }
-        
-        return [
-            'name' => $idx->index_name,
-            'columns' => array_map(fn($col) => ['name' => $col, 'order' => 'ASC'], $columns),
-            'unique' => $idx->is_unique,
-            'primary' => $idx->is_primary,
-            'type' => strtoupper($idx->index_type),
-        ];
-    }, $rawIndexes);
-}
+    ', [$table]);
+
+        return array_map(function ($idx) {
+            // Convert PostgreSQL array string to PHP array
+            $columns = $idx->columns;
+
+            // Handle PostgreSQL array format: {col1,col2,col3}
+            if (is_string($columns)) {
+                $columns = trim($columns, '{}');
+                $columns = $columns ? explode(',', $columns) : [];
+            }
+
+            // Ensure it's an array
+            if (! is_array($columns)) {
+                $columns = [];
+            }
+
+            return [
+                'name' => $idx->index_name,
+                'columns' => array_map(fn ($col) => ['name' => $col, 'order' => 'ASC'], $columns),
+                'unique' => $idx->is_unique,
+                'primary' => $idx->is_primary,
+                'type' => strtoupper($idx->index_type),
+            ];
+        }, $rawIndexes);
+    }
 
     /**
      * Get SQLite indexes
@@ -449,16 +451,16 @@ protected function getPostgresIndexes(string $table): array
     protected function getSqliteIndexes(string $table): array
     {
         $rawIndexes = $this->connection->select("PRAGMA index_list(`{$table}`)");
-        
+
         $indexes = [];
         foreach ($rawIndexes as $idx) {
             $indexInfo = $this->connection->select("PRAGMA index_info(`{$idx->name}`)");
-            
-            $columns = array_map(fn($col) => [
+
+            $columns = array_map(fn ($col) => [
                 'name' => $col->name,
                 'order' => 'ASC',
             ], $indexInfo);
-            
+
             $indexes[] = [
                 'name' => $idx->name,
                 'columns' => $columns,
@@ -467,7 +469,7 @@ protected function getPostgresIndexes(string $table): array
                 'type' => 'BTREE',
             ];
         }
-        
+
         return $indexes;
     }
 
@@ -489,10 +491,10 @@ protected function getPostgresIndexes(string $table): array
             WHERE i.object_id = OBJECT_ID(?)
             GROUP BY i.name, i.is_unique, i.is_primary_key, i.type_desc
         ", [$table]);
-        
-        return array_map(fn($idx) => [
+
+        return array_map(fn ($idx) => [
             'name' => $idx->index_name,
-            'columns' => array_map(fn($col) => ['name' => $col, 'order' => 'ASC'], explode(',', $idx->columns)),
+            'columns' => array_map(fn ($col) => ['name' => $col, 'order' => 'ASC'], explode(',', $idx->columns)),
             'unique' => $idx->is_unique,
             'primary' => $idx->is_primary_key,
             'type' => $idx->type_desc,
@@ -505,8 +507,8 @@ protected function getPostgresIndexes(string $table): array
     public function getUniqueConstraints(string $table): array
     {
         $indexes = $this->getIndexes($table);
-        
-        return array_filter($indexes, fn($idx) => $idx['unique'] && !$idx['primary']);
+
+        return array_filter($indexes, fn ($idx) => $idx['unique'] && ! $idx['primary']);
     }
 
     /**
@@ -531,16 +533,16 @@ protected function getPostgresIndexes(string $table): array
     protected function getMysqlCheckConstraints(string $table): array
     {
         try {
-            $constraints = $this->connection->select("
+            $constraints = $this->connection->select('
                 SELECT 
                     CONSTRAINT_NAME as name,
                     CHECK_CLAUSE as definition
                 FROM information_schema.CHECK_CONSTRAINTS
                 WHERE CONSTRAINT_SCHEMA = DATABASE()
                 AND TABLE_NAME = ?
-            ", [$table]);
-            
-            return array_map(fn($c) => [
+            ', [$table]);
+
+            return array_map(fn ($c) => [
                 'name' => $c->name,
                 'definition' => $c->definition,
             ], $constraints);
@@ -563,8 +565,8 @@ protected function getPostgresIndexes(string $table): array
             WHERE rel.relname = ?
             AND con.contype = 'c'
         ", [$table]);
-        
-        return array_map(fn($c) => [
+
+        return array_map(fn ($c) => [
             'name' => $c->name,
             'definition' => $c->definition,
         ], $constraints);
@@ -575,16 +577,16 @@ protected function getPostgresIndexes(string $table): array
      */
     protected function getSqlServerCheckConstraints(string $table): array
     {
-        $constraints = $this->connection->select("
+        $constraints = $this->connection->select('
             SELECT 
                 cc.name,
                 cc.definition
             FROM sys.check_constraints cc
             JOIN sys.tables t ON cc.parent_object_id = t.object_id
             WHERE t.name = ?
-        ", [$table]);
-        
-        return array_map(fn($c) => [
+        ', [$table]);
+
+        return array_map(fn ($c) => [
             'name' => $c->name,
             'definition' => $c->definition,
         ], $constraints);
@@ -605,16 +607,16 @@ protected function getPostgresIndexes(string $table): array
     {
         try {
             $result = match ($this->driver) {
-                'mysql' => $this->connection->selectOne("
+                'mysql' => $this->connection->selectOne('
                     SELECT TABLE_COMMENT 
                     FROM INFORMATION_SCHEMA.TABLES 
                     WHERE TABLE_SCHEMA = DATABASE() 
                     AND TABLE_NAME = ?
-                ", [$table]),
+                ', [$table]),
 
-                'pgsql' => $this->connection->selectOne("
+                'pgsql' => $this->connection->selectOne('
                     SELECT obj_description(?::regclass) as comment
-                ", [$table]),
+                ', [$table]),
 
                 default => null,
             };

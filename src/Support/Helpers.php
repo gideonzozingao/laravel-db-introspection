@@ -22,12 +22,12 @@ class Helpers
     {
         $normalized = self::normalizeNamespace($namespace);
         $path = str_replace('\\', '/', $normalized);
-        
+
         // Remove common prefixes like "App" if base path is "app"
         if (str_starts_with($path, 'App/') && $basePath === 'app') {
             $path = substr($path, 4);
         }
-        
+
         return trim($path, '/');
     }
 
@@ -55,8 +55,8 @@ class Helpers
     {
         $modelName = self::tableToModelName($tableName);
         $normalizedNamespace = self::normalizeNamespace($namespace);
-        
-        return $normalizedNamespace . '\\' . $modelName;
+
+        return $normalizedNamespace.'\\'.$modelName;
     }
 
     /**
@@ -121,7 +121,7 @@ class Helpers
         ];
 
         $cleanType = strtolower(preg_replace('/\(.*\)/', '', $dbType));
-        
+
         return $typeMap[$cleanType] ?? 'mixed';
     }
 
@@ -131,9 +131,9 @@ class Helpers
     public static function isNullableType(string $phpType, bool $isNullable): string
     {
         if ($isNullable && $phpType !== 'mixed') {
-            return '?' . $phpType;
+            return '?'.$phpType;
         }
-        
+
         return $phpType;
     }
 
@@ -146,7 +146,7 @@ class Helpers
         if (str_ends_with($foreignKeyColumn, '_id')) {
             return 'belongsTo';
         }
-        
+
         return 'hasMany';
     }
 
@@ -157,6 +157,7 @@ class Helpers
     public static function foreignKeyToRelationName(string $foreignKey): string
     {
         $name = str_replace('_id', '', $foreignKey);
+
         return Str::camel($name);
     }
 
@@ -175,18 +176,18 @@ class Helpers
     public static function formatDocBlock(array $lines, int $indent = 1): string
     {
         $indentation = str_repeat('    ', $indent);
-        $formatted = $indentation . "/**\n";
-        
+        $formatted = $indentation."/**\n";
+
         foreach ($lines as $line) {
             if (empty($line)) {
-                $formatted .= $indentation . " *\n";
+                $formatted .= $indentation." *\n";
             } else {
-                $formatted .= $indentation . " * " . $line . "\n";
+                $formatted .= $indentation.' * '.$line."\n";
             }
         }
-        
-        $formatted .= $indentation . " */";
-        
+
+        $formatted .= $indentation.' */';
+
         return $formatted;
     }
 
@@ -196,14 +197,14 @@ class Helpers
     public static function generatePropertyDoc(string $type, string $columnName, ?string $comment = null): string
     {
         $lines = [];
-        
+
         if ($comment) {
             $lines[] = $comment;
             $lines[] = '';
         }
-        
+
         $lines[] = "@var {$type}";
-        
+
         return self::formatDocBlock($lines);
     }
 
@@ -215,7 +216,7 @@ class Helpers
         $lines = [
             "@return \\Illuminate\\Database\\Eloquent\\Relations\\{$relationType}",
         ];
-        
+
         return self::formatDocBlock($lines);
     }
 
@@ -233,9 +234,9 @@ class Helpers
             'cache',
             'sessions',
         ];
-        
+
         $allIgnored = array_merge($defaultIgnore, $ignoreTables);
-        
+
         return in_array($tableName, $allIgnored, true);
     }
 
@@ -244,10 +245,10 @@ class Helpers
      */
     public static function ensureDirectoryExists(string $path): bool
     {
-        if (!is_dir($path)) {
+        if (! is_dir($path)) {
             return mkdir($path, 0755, true);
         }
-        
+
         return true;
     }
 
@@ -258,10 +259,10 @@ class Helpers
     {
         $modelName = self::tableToModelName($tableName);
         $namespacePath = self::namespaceToPath($namespace, $basePath);
-        
-        $fullPath = base_path($basePath . '/' . $namespacePath);
-        
-        return $fullPath . '/' . $modelName . '.php';
+
+        $fullPath = base_path($basePath.'/'.$namespacePath);
+
+        return $fullPath.'/'.$modelName.'.php';
     }
 
     /**
@@ -320,28 +321,28 @@ class Helpers
         if (empty($items)) {
             return '[]';
         }
-        
+
         $indentation = str_repeat('    ', $indent);
         $innerIndent = str_repeat('    ', $indent + 1);
-        
+
         $formatted = "[\n";
         foreach ($items as $key => $value) {
             if (is_string($key)) {
-                $formatted .= $innerIndent . "'{$key}' => ";
+                $formatted .= $innerIndent."'{$key}' => ";
             } else {
                 $formatted .= $innerIndent;
             }
-            
+
             if (is_string($value)) {
                 $formatted .= "'{$value}',\n";
             } elseif (is_array($value)) {
-                $formatted .= self::formatArray($value, $indent + 1) . ",\n";
+                $formatted .= self::formatArray($value, $indent + 1).",\n";
             } else {
                 $formatted .= "{$value},\n";
             }
         }
-        $formatted .= $indentation . "]";
-        
+        $formatted .= $indentation.']';
+
         return $formatted;
     }
 
@@ -367,9 +368,9 @@ class Helpers
             'json' => 'array',
             'jsonb' => 'array',
         ];
-        
+
         $cleanType = strtolower(preg_replace('/\(.*\)/', '', $dbType));
-        
+
         return $castMap[$cleanType] ?? null;
     }
 
@@ -388,11 +389,11 @@ class Helpers
     {
         $tables = [
             Str::snake(Str::plural($model1)),
-            Str::snake(Str::plural($model2))
+            Str::snake(Str::plural($model2)),
         ];
-        
+
         sort($tables);
-        
+
         return implode('_', $tables);
     }
 }
