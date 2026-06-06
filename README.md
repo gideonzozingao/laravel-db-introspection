@@ -14,6 +14,8 @@
 
 - [Features](#features)
 - [Requirements](#requirements)
+- [Dependencies](#dependencies)
+- [Laravel 12 Compatibility](#laravel-12-compatibility)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
@@ -45,6 +47,161 @@
 - PHP `^8.2`
 - Laravel `10.x` or `11.x`
 - Composer `2.x`
+
+---
+
+## Dependencies
+
+The following locked versions are used in this package. All runtime dependencies carry an MIT license unless noted.
+
+**Runtime**
+
+| Package | Version | Purpose |
+|---|---|---|
+| `laravel/framework` | `v11.46.1` | Core Laravel framework |
+| `nesbot/carbon` | `3.10.3` | Date/time handling |
+| `doctrine/inflector` | `2.1.0` | String inflection for model naming |
+| `guzzlehttp/guzzle` | `7.10.0` | HTTP client |
+| `monolog/monolog` | `3.9.0` | Logging |
+| `ramsey/uuid` | `4.9.1` | UUID generation |
+| `league/flysystem` | `3.30.2` | Filesystem abstraction |
+| `vlucas/phpdotenv` | `v5.6.2` | Environment variable loading |
+| `symfony/console` | `v7.3.6` | CLI command infrastructure |
+| `brick/math` | `0.14.0` | Arbitrary-precision arithmetic |
+
+**Development**
+
+| Package | Version | Purpose |
+|---|---|---|
+| `phpunit/phpunit` | `11.5.44` | Test runner |
+| `orchestra/testbench` | `v9.15.0` | Laravel package testing harness |
+| `mockery/mockery` | `1.6.12` | Mock object framework |
+| `fakerphp/faker` | `v1.24.1` | Fake data generation for tests |
+| `laravel/pint` | `v1.27.0` | PHP code style fixer |
+| `nunomaduro/collision` | `v8.8.2` | CLI error reporting |
+| `laravel/tinker` | `v2.10.1` | Interactive REPL |
+
+---
+
+## Laravel 12 Compatibility
+
+This package supports both **Laravel 11** and **Laravel 12** from the same codebase. No breaking changes are required in your application — only the dependency constraints need updating.
+
+### What changed in Laravel 12 that affects this package
+
+**`Schema::getTableListing()` now returns schema-qualified names**
+
+In Laravel 12, `Schema::getTableListing()` returns table names prefixed with the schema name by default (e.g. `main.users` instead of `users`). If the package calls this method internally to discover tables, you must strip the schema prefix or pass `schemaQualified: false`:
+
+```php
+// Laravel 11 behaviour (unqualified)
+Schema::getTableListing();
+// ['migrations', 'users', 'orders']
+
+// Laravel 12 default (qualified)
+Schema::getTableListing();
+// ['main.migrations', 'main.users', 'main.orders']
+
+// Laravel 12 — opt out of qualification to restore old behaviour
+Schema::getTableListing(schemaQualified: false);
+// ['migrations', 'users', 'orders']
+```
+
+**`Grammar` and `Blueprint` constructor signatures changed**
+
+Laravel 12 requires a `Connection` instance to be passed to `Illuminate\Database\Grammar` and `Illuminate\Database\Schema\Blueprint` constructors. The old `setConnection()` method has been removed. If the package instantiates either class directly, update the call:
+
+```php
+// Laravel 11
+$grammar = new MySqlGrammar;
+$grammar->setConnection($connection);
+
+// Laravel 12+
+$grammar = new MySqlGrammar($connection);
+```
+
+**Carbon 2.x support removed**
+
+Laravel 12 drops Carbon 2. This package's lock file already uses Carbon `3.10.3`, so no action is needed.
+
+**`HasUuids` now generates UUIDv7**
+
+The `HasUuids` trait switched from UUIDv4 to UUIDv7. This only matters if you rely on UUID ordering in generated models. No change is required for the generator itself.
+
+---
+
+### Upgrading the package to support Laravel 12
+
+**1. Update `composer.json` constraints**
+
+```json
+{
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^11.0|^12.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0",
+        "phpunit/phpunit": "^11.0|^12.0",
+        "pestphp/pest": "^2.0|^3.0"
+    }
+}
+```
+
+**2. Expand the CI matrix**
+
+Add Laravel 12 alongside Laravel 11 in your GitHub Actions workflow:
+
+```yaml
+# .github/workflows/tests.yml
+strategy:
+  matrix:
+    php: [8.2, 8.3, 8.4]
+    laravel: ['11.*', '12.*']
+    include:
+      - laravel: '11.*'
+        testbench: '9.*'
+      - laravel: '12.*'
+        testbench: '10.*'
+    exclude:
+      - php: 8.1
+        laravel: '11.*'
+      - php: 8.1
+        laravel: '12.*'
+```
+
+**3. Guard schema-qualified table names**
+
+If the package uses `Schema::getTableListing()`, add a version guard to normalise output across both framework versions:
+
+```php
+use Illuminate\Support\Facades\Schema;
+
+$tables = version_compare(app()->version(), '12.0.0', '>=')
+    ? Schema::getTableListing(schemaQualified: false)
+    : Schema::getTableListing();
+```
+
+**4. Run the full test suite against both versions**
+
+```bash
+# Test against Laravel 11
+composer require laravel/framework:^11.0 orchestra/testbench:^9.0 --no-update
+composer update && composer test
+
+# Test against Laravel 12
+composer require laravel/framework:^12.0 orchestra/testbench:^10.0 --no-update
+composer update && composer test
+```
+
+### Version support matrix
+
+| Package version | Laravel 11 | Laravel 12 | PHP |
+|---|---|---|---|
+| `1.x` (current) | ✅ | ❌ | `^8.2` |
+| `2.x` (planned) | ✅ | ✅ | `^8.2` |
+
+> Laravel 11 security support ended March 12, 2026. Laravel 12 receives bug fixes until August 2026 and security fixes until February 2027.
 
 ---
 
