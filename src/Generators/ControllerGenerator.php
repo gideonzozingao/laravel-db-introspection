@@ -22,7 +22,7 @@ final class ControllerGenerator implements Generator
     public function generate(ModelMetadata $meta, GenerationOptions $options): array
     {
         $controllerName = $meta->model.'Controller';
-        $path = app_path("Http/Controllers/{$controllerName}.php");
+        $path = app_path(sprintf('Http/Controllers/%s.php', $controllerName));
 
         if (file_exists($path) && ! $options->force) {
             return [
@@ -41,6 +41,7 @@ final class ControllerGenerator implements Generator
             if (! is_dir($dir)) {
                 mkdir($dir, 0755, true);
             }
+
             file_put_contents($path, $content);
         }
 
@@ -52,7 +53,7 @@ final class ControllerGenerator implements Generator
         ];
     }
 
-    protected function buildController(ModelMetadata $meta, string $namespace): string
+    private function buildController(ModelMetadata $meta, string $namespace): string
     {
         $modelClass = $meta->model;
         $modelVariable = Str::camel($modelClass);

@@ -4,8 +4,6 @@ namespace Zuqongtech\LaravelDbIntrospection\Support;
 
 class ModelBuilder
 {
-    protected string $tableName;
-
     protected string $namespace;
 
     protected array $columns = [];
@@ -34,9 +32,8 @@ class ModelBuilder
 
     protected ?array $constraintAnalysis = null;
 
-    public function __construct(string $tableName, string $namespace)
+    public function __construct(protected string $tableName, string $namespace)
     {
-        $this->tableName = $tableName;
         $this->namespace = Helpers::normalizeNamespace($namespace);
     }
 
@@ -218,7 +215,7 @@ class ModelBuilder
         $uses = [];
 
         if ($this->softDeletes) {
-            $uses[] = 'Illuminate\Database\Eloquent\SoftDeletes';
+            $uses[] = \Illuminate\Database\Eloquent\SoftDeletes::class;
         }
 
         return StubGenerator::usesStub($uses);
@@ -237,7 +234,7 @@ class ModelBuilder
             $properties[] = [
                 'type' => '',
                 'name' => '',
-                'comment' => "Table: {$this->tableName}",
+                'comment' => 'Table: ' . $this->tableName,
             ];
         }
 
@@ -252,7 +249,7 @@ class ModelBuilder
             if ($this->withConstraintComments) {
                 $constraintInfo = $this->getColumnConstraintInfo($column['name']);
                 if ($constraintInfo) {
-                    $comment = $comment ? "{$comment} ({$constraintInfo})" : $constraintInfo;
+                    $comment = $comment ? sprintf('%s (%s)', $comment, $constraintInfo) : $constraintInfo;
                 }
             }
 
@@ -269,18 +266,18 @@ class ModelBuilder
             $relatedModel = Helpers::tableToModelName($fk['referenced_table']);
 
             $methods[] = [
-                'return' => "\\{$this->namespace}\\{$relatedModel}",
+                'return' => sprintf('\%s\%s', $this->namespace, $relatedModel),
                 'name' => $methodName,
-                'comment' => "Get the related {$relatedModel}",
+                'comment' => 'Get the related ' . $relatedModel,
             ];
         }
 
         // Add inverse relationship documentation
         foreach ($this->inverseRelationships as $inverse) {
             $methods[] = [
-                'return' => "\\Illuminate\\Database\\Eloquent\\Collection<int, \\{$this->namespace}\\{$inverse['model']}>",
+                'return' => sprintf('\Illuminate\Database\Eloquent\Collection<int, \%s\%s>', $this->namespace, $inverse['model']),
                 'name' => $inverse['method'],
-                'comment' => "Get the related {$inverse['model']} records",
+                'comment' => sprintf('Get the related %s records', $inverse['model']),
             ];
         }
 
@@ -302,13 +299,13 @@ class ModelBuilder
         // Check if foreign key
         foreach ($this->foreignKeys as $fk) {
             if ($fk['column'] === $columnName) {
-                $info[] = "FK -> {$fk['referenced_table']}.{$fk['referenced_column']}";
+                $info[] = sprintf('FK -> %s.%s', $fk['referenced_table'], $fk['referenced_column']);
             }
         }
 
         // Check if unique
         foreach ($this->uniqueConstraints as $constraint) {
-            $constraintColumns = array_map(fn ($col) => $col['name'], $constraint['columns']);
+            $constraintColumns = array_map(fn (array $col) => $col['name'], $constraint['columns']);
             if (in_array($columnName, $constraintColumns)) {
                 $info[] = 'UNIQUE';
                 break;
@@ -318,7 +315,7 @@ class ModelBuilder
         // Check if indexed
         foreach ($this->indexes as $index) {
             if (! $index['primary'] && ! $index['unique']) {
-                $indexColumns = array_map(fn ($col) => $col['name'], $index['columns']);
+                $indexColumns = array_map(fn (array $col) => $col['name'], $index['columns']);
                 if (in_array($columnName, $indexColumns)) {
                     $info[] = 'INDEXED';
                     break;
@@ -326,7 +323,7 @@ class ModelBuilder
             }
         }
 
-        return ! empty($info) ? implode(', ', $info) : null;
+        return $info === [] ? null : implode(', ', $info);
     }
 
     /**
@@ -340,25 +337,36 @@ class ModelBuilder
             $innerIndent = '        ';
 
             $stub = "\n{$indent}/**\n";
-            $stub .= "{$indent} * The primary key for the model.\n";
-            $stub .= "{$indent} *\n";
-            $stub .= "{$indent} * @var array<int, string>\n";
-            $stub .= "{$indent} */\n";
-            $stub .= "{$indent}protected \$primaryKey = [\n";
+            $stub .= $indent . ' * The primary key for the model.
+';
+            $stub .= $indent . ' *
+';
+            $stub .= $indent . ' * @var array<int, string>
+';
+            $stub .= $indent . ' */
+';
+            $stub .= $indent . 'protected $primaryKey = [
+';
 
             foreach ($this->compositePrimaryKey as $column) {
                 $stub .= "{$innerIndent}'{$column}',\n";
             }
 
-            $stub .= "{$indent}];\n\n";
-            $stub .= "{$indent}/**\n";
-            $stub .= "{$indent} * Indicates if the IDs are auto-incrementing.\n";
-            $stub .= "{$indent} *\n";
-            $stub .= "{$indent} * @var bool\n";
-            $stub .= "{$indent} */\n";
-            $stub .= "{$indent}public \$incrementing = false;";
+            $stub .= $indent . '];
 
-            return $stub;
+';
+            $stub .= $indent . '/**
+';
+            $stub .= $indent . ' * Indicates if the IDs are auto-incrementing.
+';
+            $stub .= $indent . ' *
+';
+            $stub .= $indent . ' * @var bool
+';
+            $stub .= $indent . ' */
+';
+
+            return $stub . ($indent . 'public $incrementing = false;');
         }
 
         return StubGenerator::primaryKeyStub($this->primaryKey);
@@ -373,14 +381,17 @@ class ModelBuilder
 
         foreach ($this->columns as $column) {
             $columnName = $column['name'];
-
             // Skip primary key, timestamps, and auto-increment columns
-            if (
-                in_array($columnName, $this->compositePrimaryKey) ||
-                $columnName === $this->primaryKey ||
-                Helpers::isTimestampColumn($columnName) ||
-                str_contains($column['extra'], 'auto_increment')
-            ) {
+            if (in_array($columnName, $this->compositePrimaryKey)) {
+                continue;
+            }
+            if ($columnName === $this->primaryKey) {
+                continue;
+            }
+            if (Helpers::isTimestampColumn($columnName)) {
+                continue;
+            }
+            if (str_contains((string) $column['extra'], 'auto_increment')) {
                 continue;
             }
 
@@ -458,7 +469,7 @@ class ModelBuilder
         if (! empty($this->constraintAnalysis['primary_key']['columns'])) {
             $pkType = $this->constraintAnalysis['primary_key']['type'];
             $pkCols = implode(', ', $this->constraintAnalysis['primary_key']['columns']);
-            $comments[] = "Primary Key: {$pkCols} ({$pkType})";
+            $comments[] = sprintf('Primary Key: %s (%s)', $pkCols, $pkType);
         }
 
         // Foreign Keys
@@ -466,7 +477,7 @@ class ModelBuilder
             $comments[] = 'Foreign Keys:';
             foreach ($this->constraintAnalysis['foreign_keys'] as $fk) {
                 $ref = $fk['references'];
-                $comments[] = "  - {$fk['column']} -> {$ref['table']}.{$ref['column']}";
+                $comments[] = sprintf('  - %s -> %s.%s', $fk['column'], $ref['table'], $ref['column']);
             }
         }
 
@@ -475,33 +486,34 @@ class ModelBuilder
             $comments[] = 'Unique Constraints:';
             foreach ($this->constraintAnalysis['unique_constraints'] as $constraint) {
                 $cols = implode(', ', $constraint['columns']);
-                $comments[] = "  - {$constraint['name']}: ({$cols})";
+                $comments[] = sprintf('  - %s: (%s)', $constraint['name'], $cols);
             }
         }
 
         // Indexes
-        $nonUniqueIndexes = array_filter($this->constraintAnalysis['indexes'], fn ($idx) => ! $idx['is_unique'] && ! $idx['is_primary']);
-        if (! empty($nonUniqueIndexes)) {
+        $nonUniqueIndexes = array_filter($this->constraintAnalysis['indexes'], fn (array $idx): bool => ! $idx['is_unique'] && ! $idx['is_primary']);
+        if ($nonUniqueIndexes !== []) {
             $comments[] = 'Indexes:';
             foreach ($nonUniqueIndexes as $index) {
                 $cols = implode(', ', $index['columns']);
-                $comments[] = "  - {$index['name']}: ({$cols})";
+                $comments[] = sprintf('  - %s: (%s)', $index['name'], $cols);
             }
         }
 
-        if (empty($comments)) {
+        if ($comments === []) {
             return '';
         }
 
         $stub = "\n{$indent}/*\n";
-        $stub .= "{$indent} * Database Constraints\n";
-        $stub .= "{$indent} * ".str_repeat('-', 50)."\n";
+        $stub .= $indent . ' * Database Constraints
+';
+        $stub .= $indent . ' * '.str_repeat('-', 50)."\n";
         foreach ($comments as $comment) {
-            $stub .= "{$indent} * {$comment}\n";
+            $stub .= sprintf('%s * %s%s', $indent, $comment, PHP_EOL);
         }
-        $stub .= "{$indent} */\n";
 
-        return $stub;
+        return $stub . ($indent . ' */
+');
     }
 
     /**
@@ -543,7 +555,7 @@ class ModelBuilder
             }
         }
 
-        if (empty($relationships)) {
+        if ($relationships === []) {
             return '';
         }
 

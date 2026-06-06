@@ -120,7 +120,7 @@ class Helpers
             'uuid' => 'string',
         ];
 
-        $cleanType = strtolower(preg_replace('/\(.*\)/', '', $dbType));
+        $cleanType = strtolower((string) preg_replace('/\(.*\)/', '', $dbType));
 
         return $typeMap[$cleanType] ?? 'mixed';
     }
@@ -186,9 +186,7 @@ class Helpers
             }
         }
 
-        $formatted .= $indentation.' */';
-
-        return $formatted;
+        return $formatted . ($indentation . ' */');
     }
 
     /**
@@ -203,7 +201,7 @@ class Helpers
             $lines[] = '';
         }
 
-        $lines[] = "@var {$type}";
+        $lines[] = '@var ' . $type;
 
         return self::formatDocBlock($lines);
     }
@@ -214,7 +212,7 @@ class Helpers
     public static function generateRelationshipDoc(string $relationType, string $relatedModel): string
     {
         $lines = [
-            "@return \\Illuminate\\Database\\Eloquent\\Relations\\{$relationType}",
+            '@return \Illuminate\Database\Eloquent\Relations\\' . $relationType,
         ];
 
         return self::formatDocBlock($lines);
@@ -318,7 +316,7 @@ class Helpers
      */
     public static function formatArray(array $items, int $indent = 2): string
     {
-        if (empty($items)) {
+        if ($items === []) {
             return '[]';
         }
 
@@ -328,7 +326,7 @@ class Helpers
         $formatted = "[\n";
         foreach ($items as $key => $value) {
             if (is_string($key)) {
-                $formatted .= $innerIndent."'{$key}' => ";
+                $formatted .= $innerIndent.sprintf("'%s' => ", $key);
             } else {
                 $formatted .= $innerIndent;
             }
@@ -338,12 +336,12 @@ class Helpers
             } elseif (is_array($value)) {
                 $formatted .= self::formatArray($value, $indent + 1).",\n";
             } else {
-                $formatted .= "{$value},\n";
+                $formatted .= $value . ',
+';
             }
         }
-        $formatted .= $indentation.']';
 
-        return $formatted;
+        return $formatted . ($indentation . ']');
     }
 
     /**
@@ -369,7 +367,7 @@ class Helpers
             'jsonb' => 'array',
         ];
 
-        $cleanType = strtolower(preg_replace('/\(.*\)/', '', $dbType));
+        $cleanType = strtolower((string) preg_replace('/\(.*\)/', '', $dbType));
 
         return $castMap[$cleanType] ?? null;
     }

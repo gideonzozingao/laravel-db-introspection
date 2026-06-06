@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Zuqongtech\LaravelDbIntrospection\Tests;
 
 use Orchestra\Testbench\TestCase;
@@ -12,7 +14,7 @@ abstract class ExampleTest extends TestCase
         return [LaravelDbIntrospectionServiceProvider::class];
     }
 
-    public function test_example()
+    public function test_example(): void
     {
         $this->assertTrue(true);
     }

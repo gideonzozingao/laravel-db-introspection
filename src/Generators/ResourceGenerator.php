@@ -21,7 +21,7 @@ final class ResourceGenerator implements Generator
     public function generate(ModelMetadata $meta, GenerationOptions $options): array
     {
         $resourceName = $meta->model.'Resource';
-        $path = app_path("Http/Resources/{$resourceName}.php");
+        $path = app_path(sprintf('Http/Resources/%s.php', $resourceName));
 
         if (file_exists($path) && ! $options->force) {
             return [
@@ -39,6 +39,7 @@ final class ResourceGenerator implements Generator
             if (! is_dir($dir)) {
                 mkdir($dir, 0755, true);
             }
+
             file_put_contents($path, $content);
         }
 
@@ -50,14 +51,13 @@ final class ResourceGenerator implements Generator
         ];
     }
 
-    protected function buildResource(ModelMetadata $meta): string
+    private function buildResource(ModelMetadata $meta): string
     {
         $resourceName = $meta->model.'Resource';
-        $modelClass = $meta->model;
 
         $fields = collect($meta->columns)
-            ->reject(fn ($col) => in_array($col['name'], ['password', 'remember_token', 'api_token']))
-            ->map(fn ($col) => "            '{$col['name']}' => \$this->{$col['name']},")
+            ->reject(fn ($col): bool => in_array($col['name'], ['password', 'remember_token', 'api_token']))
+            ->map(fn ($col): string => sprintf("            '%s' => \$this->%s,", $col['name'], $col['name']))
             ->implode("\n");
 
         return <<<PHP

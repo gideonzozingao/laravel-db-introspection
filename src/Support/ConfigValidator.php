@@ -30,7 +30,7 @@ class ConfigValidator
         $this->validateTypeMappings();
         $this->validateHooks();
 
-        return empty($this->errors);
+        return $this->errors === [];
     }
 
     /**
@@ -85,7 +85,7 @@ class ConfigValidator
         // Check if path is writable
         $fullPath = base_path($path);
         if (! is_dir($fullPath) && ! @mkdir($fullPath, 0755, true)) {
-            $this->addWarning('target_path', "Target path is not writable: {$path}");
+            $this->addWarning('target_path', 'Target path is not writable: ' . $path);
         }
     }
 
@@ -100,7 +100,7 @@ class ConfigValidator
             $availableConnections = array_keys(config('database.connections', []));
 
             if (! in_array($connection, $availableConnections)) {
-                $this->addError('connection', "Database connection '{$connection}' is not configured");
+                $this->addError('connection', sprintf("Database connection '%s' is not configured", $connection));
             }
         }
     }
@@ -119,7 +119,7 @@ class ConfigValidator
         }
 
         foreach ($ignoreTables as $table) {
-            if (! is_string($table) || empty($table)) {
+            if (! is_string($table) || ($table === '' || $table === '0')) {
                 $this->addWarning('ignore_tables', 'Invalid table name in ignore list');
             }
         }
@@ -142,7 +142,7 @@ class ConfigValidator
 
             // Test if pattern is valid regex
             if (@preg_match($pattern, '') === false) {
-                $this->addError('ignore_table_patterns', "Invalid regex pattern: {$pattern}");
+                $this->addError('ignore_table_patterns', 'Invalid regex pattern: ' . $pattern);
             }
         }
     }
@@ -173,7 +173,7 @@ class ConfigValidator
         foreach ($booleanOptions as $option) {
             $value = $relationships[$option] ?? null;
             if ($value !== null && ! is_bool($value)) {
-                $this->addError("relationships.{$option}", 'Must be a boolean value');
+                $this->addError('relationships.' . $option, 'Must be a boolean value');
             }
         }
 
@@ -213,7 +213,7 @@ class ConfigValidator
             }
 
             if (! Helpers::isValidClassName($model)) {
-                $this->addError('naming.custom_model_names', "Invalid model class name: {$model}");
+                $this->addError('naming.custom_model_names', 'Invalid model class name: ' . $model);
             }
         }
     }
@@ -251,7 +251,7 @@ class ConfigValidator
             $validVisibilities = ['public', 'protected', 'private'];
             foreach ($visibilityOrder as $visibility) {
                 if (! in_array($visibility, $validVisibilities)) {
-                    $this->addError('code_style.property_visibility_order', "Invalid visibility: {$visibility}");
+                    $this->addError('code_style.property_visibility_order', 'Invalid visibility: ' . $visibility);
                 }
             }
         }
@@ -296,7 +296,7 @@ class ConfigValidator
 
         // Validate memory limit
         $memoryLimit = $performance['memory_limit'] ?? '512M';
-        if ($memoryLimit !== null && ! preg_match('/^\d+[KMG]?$/i', $memoryLimit)) {
+        if (! preg_match('/^\d+[KMG]?$/i', (string) $memoryLimit)) {
             $this->addError('performance.memory_limit', 'Invalid memory limit format (e.g., 512M, 1G)');
         }
 
@@ -321,17 +321,13 @@ class ConfigValidator
         }
 
         // Check PHP version for attributes
-        if ($advanced['use_attributes'] ?? false) {
-            if (PHP_VERSION_ID < 80000) {
-                $this->addError('advanced.use_attributes', 'Attributes require PHP 8.0 or higher');
-            }
+        if (($advanced['use_attributes'] ?? false) && PHP_VERSION_ID < 80000) {
+            $this->addError('advanced.use_attributes', 'Attributes require PHP 8.0 or higher');
         }
 
         // Check PHP version for enums
-        if ($advanced['generate_enums'] ?? false) {
-            if (PHP_VERSION_ID < 80100) {
-                $this->addError('advanced.generate_enums', 'Enums require PHP 8.1 or higher');
-            }
+        if (($advanced['generate_enums'] ?? false) && PHP_VERSION_ID < 80100) {
+            $this->addError('advanced.generate_enums', 'Enums require PHP 8.1 or higher');
         }
     }
 
@@ -389,7 +385,7 @@ class ConfigValidator
             $logDir = dirname($logPath);
 
             if (! is_dir($logDir) && ! @mkdir($logDir, 0755, true)) {
-                $this->addWarning('output.log_file', "Log directory is not writable: {$logDir}");
+                $this->addWarning('output.log_file', 'Log directory is not writable: ' . $logDir);
             }
         }
     }
@@ -416,8 +412,8 @@ class ConfigValidator
                 continue;
             }
 
-            if (! in_array($phpType, $validPhpTypes)) {
-                $this->addWarning('type_mappings', "Unusual PHP type: {$phpType}");
+            if (! in_array($phpType, $validPhpTypes, true)) {
+                $this->addWarning('type_mappings', 'Unusual PHP type: ' . $phpType);
             }
         }
 
@@ -455,13 +451,13 @@ class ConfigValidator
 
             if ($hook !== null) {
                 if (! is_string($hook)) {
-                    $this->addError("hooks.{$hookName}", 'Hook must be a string (class name) or null');
+                    $this->addError('hooks.' . $hookName, 'Hook must be a string (class name) or null');
 
                     continue;
                 }
 
                 if (! class_exists($hook)) {
-                    $this->addError("hooks.{$hookName}", "Hook class does not exist: {$hook}");
+                    $this->addError('hooks.' . $hookName, 'Hook class does not exist: ' . $hook);
                 }
             }
         }
@@ -504,7 +500,7 @@ class ConfigValidator
      */
     public function hasErrors(): bool
     {
-        return ! empty($this->errors);
+        return $this->errors !== [];
     }
 
     /**
@@ -512,7 +508,7 @@ class ConfigValidator
      */
     public function hasWarnings(): bool
     {
-        return ! empty($this->warnings);
+        return $this->warnings !== [];
     }
 
     /**
@@ -521,7 +517,7 @@ class ConfigValidator
     public function getFormattedErrors(): array
     {
         return array_map(
-            fn ($key, $message) => "[{$key}] {$message}",
+            fn (string $key, $message): string => sprintf('[%s] %s', $key, $message),
             array_keys($this->errors),
             $this->errors
         );
@@ -533,7 +529,7 @@ class ConfigValidator
     public function getFormattedWarnings(): array
     {
         return array_map(
-            fn ($key, $message) => "[{$key}] {$message}",
+            fn (string $key, $message): string => sprintf('[%s] %s', $key, $message),
             array_keys($this->warnings),
             $this->warnings
         );
@@ -546,7 +542,8 @@ class ConfigValidator
     {
         if (! $this->validate()) {
             $messages = implode("\n", $this->getFormattedErrors());
-            throw new \InvalidArgumentException("Configuration validation failed:\n{$messages}");
+            throw new \InvalidArgumentException('Configuration validation failed:
+' . $messages);
         }
     }
 
@@ -556,7 +553,7 @@ class ConfigValidator
     public function getSummary(): array
     {
         return [
-            'valid' => empty($this->errors),
+            'valid' => $this->errors === [],
             'errors' => count($this->errors),
             'warnings' => count($this->warnings),
             'error_messages' => $this->getFormattedErrors(),

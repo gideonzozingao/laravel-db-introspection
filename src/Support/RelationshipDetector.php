@@ -4,15 +4,12 @@ namespace Zuqongtech\LaravelDbIntrospection\Support;
 
 class RelationshipDetector
 {
-    protected DatabaseInspector $inspector;
-
     protected array $allTables = [];
 
     protected array $foreignKeyMap = [];
 
-    public function __construct(DatabaseInspector $inspector)
+    public function __construct(protected DatabaseInspector $inspector)
     {
-        $this->inspector = $inspector;
     }
 
     /**
@@ -134,7 +131,7 @@ class RelationshipDetector
 
         foreach ($this->allTables as $table) {
             $manyToMany = $this->detectManyToMany($table);
-            if (! empty($manyToMany)) {
+            if ($manyToMany !== []) {
                 $pivotTables[] = $manyToMany;
             }
         }
@@ -153,8 +150,8 @@ class RelationshipDetector
 
         // Look for *_type and *_id pairs
         foreach ($columnNames as $columnName) {
-            if (str_ends_with($columnName, '_type')) {
-                $prefix = substr($columnName, 0, -5);
+            if (str_ends_with((string) $columnName, '_type')) {
+                $prefix = substr((string) $columnName, 0, -5);
                 $idColumn = $prefix.'_id';
 
                 if (in_array($idColumn, $columnNames)) {
@@ -206,7 +203,7 @@ class RelationshipDetector
     {
         $manyToMany = $this->detectManyToMany($table);
 
-        return ! empty($manyToMany);
+        return $manyToMany !== [];
     }
 
     /**

@@ -10,8 +10,22 @@ return RectorConfig::configure()
         __DIR__.'/src',
         __DIR__.'/tests',
     ])
-    // uncomment to reach your current PHP version
-    // ->withPhpSets()
-    ->withTypeCoverageLevel(0)
-    ->withDeadCodeLevel(0)
-    ->withCodeQualityLevel(0);
+
+    ->withPhpSets(php84: true)
+
+    // ->withDeadCodeLevel(5)
+    // ->withCodeQualityLevel(5)
+
+    ->withPreparedSets(
+        deadCode: true,
+        codeQuality: true,
+        codingStyle: true,
+        typeDeclarations: true,
+        privatization: true,
+        instanceOf: true,
+        earlyReturn: true,
+    )
+
+    ->withSkip([
+        __DIR__.'/vendor',
+    ]);

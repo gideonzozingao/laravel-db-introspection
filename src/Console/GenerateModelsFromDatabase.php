@@ -89,7 +89,7 @@ class GenerateModelsFromDatabase extends Command
         // Apply filters
         $tablesToProcess = $this->filterTables($allTables, $options);
 
-        if (empty($tablesToProcess)) {
+        if ($tablesToProcess === []) {
             $this->warn('⚠️  No tables found to process.');
 
             return Command::SUCCESS;
@@ -146,7 +146,7 @@ class GenerateModelsFromDatabase extends Command
         $driver = $this->inspector->getDriver();
         $database = $this->inspector->getDatabaseName();
 
-        $this->info("🔍 Inspecting connection [{$connectionName}] using driver [{$driver}] on database [{$database}]...");
+        $this->info(sprintf('🔍 Inspecting connection [%s] using driver [%s] on database [%s]...', $connectionName, $driver, $database));
 
         if ($options->dryRun) {
             $this->warn('🔸 DRY RUN MODE - No files will be written');
@@ -157,7 +157,7 @@ class GenerateModelsFromDatabase extends Command
     {
         $artifacts = $options->getEnabledGenerators();
 
-        if (! empty($artifacts)) {
+        if ($artifacts !== []) {
             $this->info('📋 Generation Plan:');
             $this->line('   Will generate: '.implode(', ', $artifacts));
             $this->newLine();
@@ -174,9 +174,7 @@ class GenerateModelsFromDatabase extends Command
         // Remove ignored tables
         $ignoreTables = $options->getAllIgnoredTables();
 
-        $filtered = array_filter($allTables, function ($table) use ($ignoreTables) {
-            return ! Helpers::shouldIgnoreTable($table, $ignoreTables);
-        });
+        $filtered = array_filter($allTables, fn($table) => ! Helpers::shouldIgnoreTable($table, $ignoreTables));
 
         return array_values($filtered);
     }
@@ -190,7 +188,7 @@ class GenerateModelsFromDatabase extends Command
         $progressBar->start();
 
         foreach ($tables as $table) {
-            $progressBar->setMessage("Processing {$table}");
+            $progressBar->setMessage('Processing ' . $table);
 
             try {
                 // Generate model (preserve existing functionality)
@@ -243,7 +241,7 @@ class GenerateModelsFromDatabase extends Command
 
         // Validate model name
         if (! Helpers::isValidClassName($modelName)) {
-            throw new \Exception("Invalid model name: {$modelName}");
+            throw new \Exception('Invalid model name: ' . $modelName);
         }
 
         // Check if model exists
@@ -262,7 +260,7 @@ class GenerateModelsFromDatabase extends Command
         if ($modelExists && $options->backup && ! $options->dryRun) {
             $backupPath = $this->fileWriter->backupModel($namespace, $modelName, $basePath);
             if ($backupPath) {
-                $this->line("💾 Backed up to: {$backupPath}");
+                $this->line('💾 Backed up to: ' . $backupPath);
             }
         }
 
@@ -376,23 +374,25 @@ class GenerateModelsFromDatabase extends Command
 
         // Display model summary
         $this->info("\n   Models:");
-        $this->info("      ✅ Successful: {$modelStats['success']}");
+        $this->info('      ✅ Successful: ' . $modelStats['success']);
         if ($modelStats['skipped'] > 0) {
-            $this->info("      ⏭️  Skipped: {$modelStats['skipped']}");
+            $this->info('      ⏭️  Skipped: ' . $modelStats['skipped']);
         }
+
         if ($modelStats['failed'] > 0) {
-            $this->error("      ❌ Failed: {$modelStats['failed']}");
+            $this->error('      ❌ Failed: ' . $modelStats['failed']);
         }
 
         // Display artifact summaries
         foreach ($artifactStats as $type => $stats) {
             $this->info("\n   {$type}s:");
-            $this->info("      ✅ Successful: {$stats['success']}");
+            $this->info('      ✅ Successful: ' . $stats['success']);
             if ($stats['skipped'] > 0) {
-                $this->info("      ⏭️  Skipped: {$stats['skipped']}");
+                $this->info('      ⏭️  Skipped: ' . $stats['skipped']);
             }
+
             if ($stats['failed'] > 0) {
-                $this->error("      ❌ Failed: {$stats['failed']}");
+                $this->error('      ❌ Failed: ' . $stats['failed']);
             }
         }
 
@@ -406,12 +406,12 @@ class GenerateModelsFromDatabase extends Command
         if ($options->withInverse) {
             $pivotTables = $this->relationshipDetector->getPivotTables();
 
-            if (! empty($pivotTables)) {
+            if ($pivotTables !== []) {
                 $this->newLine();
                 $this->info('🔄 Detected Pivot Tables:');
 
                 foreach ($pivotTables as $pivot) {
-                    $this->line("   {$pivot['pivot_table']}: {$pivot['model1']} ↔ {$pivot['model2']}");
+                    $this->line(sprintf('   %s: %s ↔ %s', $pivot['pivot_table'], $pivot['model1'], $pivot['model2']));
                 }
             }
         }
@@ -426,9 +426,9 @@ class GenerateModelsFromDatabase extends Command
 
     protected function displayDetailedResults(array $results): void
     {
-        $successfulModels = array_filter($results, fn ($r) => ($r['model']['status'] ?? '') === 'success');
+        $successfulModels = array_filter($results, fn (array $r): bool => ($r['model']['status'] ?? '') === 'success');
 
-        if (empty($successfulModels)) {
+        if ($successfulModels === []) {
             return;
         }
 
@@ -441,7 +441,7 @@ class GenerateModelsFromDatabase extends Command
 
             $artifactList = collect($artifacts)
                 ->where('status', 'success')
-                ->map(fn ($a) => $a['type'])
+                ->map(fn ($a): mixed => $a['type'])
                 ->implode(', ');
 
             if (empty($artifactList)) {
@@ -468,11 +468,11 @@ class GenerateModelsFromDatabase extends Command
     {
         $issues = $this->relationshipDetector->validateForeignKeys();
 
-        if (! empty($issues)) {
+        if ($issues !== []) {
             $this->warn("\n⚠️  Found ".count($issues).' foreign key issue(s):');
 
             foreach ($issues as $issue) {
-                $this->line("   - {$issue['table']}.{$issue['column']}: {$issue['issue']}");
+                $this->line(sprintf('   - %s.%s: %s', $issue['table'], $issue['column'], $issue['issue']));
             }
 
             $this->newLine();
@@ -485,11 +485,11 @@ class GenerateModelsFromDatabase extends Command
     {
         $issues = $this->constraintAnalyzer->validateConstraintIntegrity($tables);
 
-        if (! empty($issues)) {
+        if ($issues !== []) {
             $this->warn("\n⚠️  Found ".count($issues).' constraint integrity issue(s):');
 
             foreach ($issues as $issue) {
-                $this->line("   - [{$issue['type']}] {$issue['message']}");
+                $this->line(sprintf('   - [%s] %s', $issue['type'], $issue['message']));
             }
 
             $this->newLine();
@@ -505,19 +505,19 @@ class GenerateModelsFromDatabase extends Command
         $summary = $this->constraintAnalyzer->getConstraintSummary($tables);
 
         $this->info('Constraint Summary:');
-        $this->line("  Total Tables: {$summary['total_tables']}");
-        $this->line("  Tables with Primary Keys: {$summary['tables_with_pk']}");
+        $this->line('  Total Tables: ' . $summary['total_tables']);
+        $this->line('  Tables with Primary Keys: ' . $summary['tables_with_pk']);
 
         if ($summary['tables_without_pk'] > 0) {
-            $this->warn("  Tables without Primary Keys: {$summary['tables_without_pk']}");
+            $this->warn('  Tables without Primary Keys: ' . $summary['tables_without_pk']);
         }
 
-        $this->line("  Total Foreign Keys: {$summary['total_foreign_keys']}");
-        $this->line("  Total Indexes: {$summary['total_indexes']}");
-        $this->line("  Total Unique Constraints: {$summary['total_unique_constraints']}");
+        $this->line('  Total Foreign Keys: ' . $summary['total_foreign_keys']);
+        $this->line('  Total Indexes: ' . $summary['total_indexes']);
+        $this->line('  Total Unique Constraints: ' . $summary['total_unique_constraints']);
 
         if ($summary['tables_with_issues'] > 0) {
-            $this->warn("  Tables with Issues: {$summary['tables_with_issues']}");
+            $this->warn('  Tables with Issues: ' . $summary['tables_with_issues']);
         }
 
         $this->newLine();
@@ -534,7 +534,7 @@ class GenerateModelsFromDatabase extends Command
 
             if (! empty($analysis['recommendations'])) {
                 $hasRecommendations = true;
-                $this->line("Table: <comment>{$table}</comment>");
+                $this->line(sprintf('Table: <comment>%s</comment>', $table));
 
                 foreach ($analysis['recommendations'] as $rec) {
                     $icon = match ($rec['type']) {
@@ -545,8 +545,8 @@ class GenerateModelsFromDatabase extends Command
                         default => '•'
                     };
 
-                    $this->line("  {$icon} [{$rec['category']}] {$rec['message']}");
-                    $this->line("     → {$rec['suggestion']}");
+                    $this->line(sprintf('  %s [%s] %s', $icon, $rec['category'], $rec['message']));
+                    $this->line('     → ' . $rec['suggestion']);
                 }
 
                 $this->newLine();
@@ -562,13 +562,13 @@ class GenerateModelsFromDatabase extends Command
     {
         $this->error("\n❌ Configuration validation failed with the following errors:\n");
         foreach ($validator->getFormattedErrors() as $error) {
-            $this->line("  - {$error}");
+            $this->line('  - ' . $error);
         }
 
         if ($validator->hasWarnings()) {
             $this->warn("\n⚠️  Warnings:");
             foreach ($validator->getFormattedWarnings() as $warning) {
-                $this->line("  - {$warning}");
+                $this->line('  - ' . $warning);
             }
         }
 
@@ -580,8 +580,9 @@ class GenerateModelsFromDatabase extends Command
     {
         $this->warn('⚠️  Configuration warnings detected:');
         foreach ($validator->getFormattedWarnings() as $warning) {
-            $this->line("  - {$warning}");
+            $this->line('  - ' . $warning);
         }
+
         $this->newLine();
     }
 }

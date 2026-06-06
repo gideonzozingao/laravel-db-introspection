@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Zuqongtech\LaravelDbIntrospection\Contracts;
 
 use Zuqongtech\LaravelDbIntrospection\Support\GenerationOptions;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Zuqongtech\LaravelDbIntrospection;
 
 use Illuminate\Support\ServiceProvider;
@@ -7,7 +9,7 @@ use Zuqongtech\LaravelDbIntrospection\Console\GenerateModelsFromDatabase;
 
 class LaravelDbIntrospectionServiceProvider extends ServiceProvider
 {
-    public function boot()
+    public function boot(): void
     {
         if ($this->app->runningInConsole()) {
             // Register artisan commands
@@ -22,7 +24,7 @@ class LaravelDbIntrospectionServiceProvider extends ServiceProvider
         }
     }
 
-    public function register()
+    public function register(): void
     {
         // Merge default config
         $this->mergeConfigFrom(
