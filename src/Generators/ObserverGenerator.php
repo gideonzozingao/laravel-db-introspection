@@ -23,7 +23,7 @@ class ObserverGenerator implements Generator
     public function generate(ModelMetadata $meta, GenerationOptions $options): array
     {
         $observerName = $meta->model.'Observer';
-        $path = app_path("Observers/{$observerName}.php");
+        $path = app_path(sprintf('Observers/%s.php', $observerName));
 
         if (file_exists($path) && ! $options->force) {
             return [
@@ -42,6 +42,7 @@ class ObserverGenerator implements Generator
             if (! is_dir($dir)) {
                 mkdir($dir, 0755, true);
             }
+
             file_put_contents($path, $content);
         }
 

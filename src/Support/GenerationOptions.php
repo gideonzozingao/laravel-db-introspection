@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
  * This class encapsulates all configuration options for the generation process,
  * normalizing CLI flags and config values into a single, type-safe object.
  */
-final class GenerationOptions
+final class GenerationOptions implements \Stringable
 {
     /**
      * Create a new GenerationOptions instance
@@ -165,15 +165,19 @@ final class GenerationOptions
         if ($this->models) {
             $enabled[] = 'Models';
         }
+
         if ($this->controllers) {
             $enabled[] = 'Controllers';
         }
+
         if ($this->resources) {
             $enabled[] = 'Resources';
         }
+
         if ($this->observers) {
             $enabled[] = 'Observers';
         }
+
         if ($this->policies) {
             $enabled[] = 'Policies';
         }
@@ -222,7 +226,7 @@ final class GenerationOptions
      */
     public function hasSpecificTables(): bool
     {
-        return ! empty($this->tables);
+        return $this->tables !== [];
     }
 
     /**
@@ -230,7 +234,7 @@ final class GenerationOptions
      */
     public function hasIgnoredTables(): bool
     {
-        return ! empty($this->ignore);
+        return $this->ignore !== [];
     }
 
     /**
@@ -336,7 +340,7 @@ final class GenerationOptions
         $parts = [];
 
         $generators = $this->getEnabledGenerators();
-        if (! empty($generators)) {
+        if ($generators !== []) {
             $parts[] = 'Generators: '.implode(', ', $generators);
         }
 
@@ -374,17 +378,15 @@ final class GenerationOptions
         }
 
         // Validate namespace format
-        if ($this->namespace) {
-            if (! preg_match('/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff\\\\]*$/', $this->namespace)) {
-                $errors[] = 'Invalid namespace format';
-            }
+        if ($this->namespace && ! preg_match('/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff\\\\]*$/', $this->namespace)) {
+            $errors[] = 'Invalid namespace format';
         }
 
         // Check if path exists or can be created
         if ($this->path) {
             $fullPath = base_path($this->path);
             if (! is_dir($fullPath) && ! @mkdir($fullPath, 0755, true)) {
-                $errors[] = "Path does not exist and cannot be created: {$this->path}";
+                $errors[] = 'Path does not exist and cannot be created: ' . $this->path;
             }
         }
 
@@ -392,13 +394,13 @@ final class GenerationOptions
         if ($this->connection) {
             $connections = array_keys(config('database.connections', []));
             if (! in_array($this->connection, $connections)) {
-                $errors[] = "Database connection '{$this->connection}' is not configured";
+                $errors[] = sprintf("Database connection '%s' is not configured", $this->connection);
             }
         }
 
         // Validate tables are not empty strings
         foreach ($this->tables as $table) {
-            if (! is_string($table) || empty(trim($table))) {
+            if (! is_string($table) || in_array(trim($table), ['', '0'], true)) {
                 $errors[] = 'Invalid table name in tables list';
                 break;
             }
@@ -406,7 +408,7 @@ final class GenerationOptions
 
         // Validate ignore list
         foreach ($this->ignore as $table) {
-            if (! is_string($table) || empty(trim($table))) {
+            if (! is_string($table) || in_array(trim($table), ['', '0'], true)) {
                 $errors[] = 'Invalid table name in ignore list';
                 break;
             }
@@ -420,7 +422,7 @@ final class GenerationOptions
      */
     public function isValid(): bool
     {
-        return empty($this->validate());
+        return $this->validate() === [];
     }
 
     /**
@@ -428,6 +430,6 @@ final class GenerationOptions
      */
     public function __toString(): string
     {
-        return json_encode($this->toArray(), JSON_PRETTY_PRINT);
+        return (string) json_encode($this->toArray(), JSON_PRETTY_PRINT);
     }
 }

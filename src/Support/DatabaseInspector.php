@@ -43,7 +43,7 @@ class DatabaseInspector
     {
         $tables = match ($this->driver) {
             'mysql' => collect($this->connection->select('SHOW TABLES'))
-                ->map(fn ($t) => array_values((array) $t)[0])
+                ->map(fn ($t): mixed => array_values((array) $t)[0])
                 ->toArray(),
 
             'pgsql' => collect($this->connection->select("
@@ -68,7 +68,7 @@ class DatabaseInspector
                 ORDER BY TABLE_NAME
             "))->pluck('TABLE_NAME')->toArray(),
 
-            default => throw new \Exception("Unsupported database driver: {$this->driver}")
+            default => throw new \Exception('Unsupported database driver: ' . $this->driver)
         };
 
         return array_values($tables);
@@ -79,15 +79,13 @@ class DatabaseInspector
      */
     public function getColumns(string $table): array
     {
-        $columns = match ($this->driver) {
+        return match ($this->driver) {
             'mysql' => $this->getMysqlColumns($table),
             'pgsql' => $this->getPostgresColumns($table),
             'sqlite' => $this->getSqliteColumns($table),
             'sqlsrv' => $this->getSqlServerColumns($table),
             default => []
         };
-
-        return $columns;
     }
 
     /**
@@ -95,9 +93,9 @@ class DatabaseInspector
      */
     protected function getMysqlColumns(string $table): array
     {
-        $columns = $this->connection->select("SHOW FULL COLUMNS FROM `{$table}`");
+        $columns = $this->connection->select(sprintf('SHOW FULL COLUMNS FROM `%s`', $table));
 
-        return array_map(fn ($col) => [
+        return array_map(fn ($col): array => [
             'name' => $col->Field,
             'type' => $col->Type,
             'nullable' => $col->Null === 'YES',
@@ -130,13 +128,13 @@ class DatabaseInspector
             ORDER BY ordinal_position
         ", [$table]);
 
-        return array_map(fn ($col) => [
+        return array_map(fn ($col): array => [
             'name' => $col->column_name,
             'type' => $col->data_type,
             'udt_name' => $col->udt_name,
             'nullable' => $col->is_nullable === 'YES',
             'default' => $col->column_default,
-            'extra' => strpos($col->column_default ?? '', 'nextval') !== false ? 'auto_increment' : '',
+            'extra' => str_contains($col->column_default ?? '', 'nextval') ? 'auto_increment' : '',
             'comment' => $col->column_comment,
             'key' => '',
             'max_length' => $col->character_maximum_length,
@@ -150,9 +148,9 @@ class DatabaseInspector
      */
     protected function getSqliteColumns(string $table): array
     {
-        $columns = $this->connection->select("PRAGMA table_info(`{$table}`)");
+        $columns = $this->connection->select(sprintf('PRAGMA table_info(`%s`)', $table));
 
-        return array_map(fn ($col) => [
+        return array_map(fn ($col): array => [
             'name' => $col->name,
             'type' => $col->type,
             'nullable' => $col->notnull == 0,
@@ -186,7 +184,7 @@ class DatabaseInspector
             ORDER BY c.ORDINAL_POSITION
         ", [$table]);
 
-        return array_map(fn ($col) => [
+        return array_map(fn ($col): array => [
             'name' => $col->column_name,
             'type' => $col->data_type,
             'nullable' => $col->is_nullable === 'YES',
@@ -215,7 +213,7 @@ class DatabaseInspector
                     WHERE i.indrelid = ?::regclass AND i.indisprimary
                 ', [$table])->attname ?? null,
 
-                'sqlite' => collect($this->connection->select("PRAGMA table_info(`{$table}`)"))
+                'sqlite' => collect($this->connection->select(sprintf('PRAGMA table_info(`%s`)', $table)))
                     ->where('pk', 1)
                     ->pluck('name')
                     ->first(),
@@ -231,7 +229,7 @@ class DatabaseInspector
             };
 
             return $result ?? 'id';
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return 'id';
         }
     }
@@ -242,7 +240,7 @@ class DatabaseInspector
     public function getCompositePrimaryKey(string $table): array
     {
         try {
-            $columns = match ($this->driver) {
+            return match ($this->driver) {
                 'mysql' => collect($this->connection->select("
                     SHOW KEYS FROM `{$table}` WHERE Key_name = 'PRIMARY'
                     ORDER BY Seq_in_index
@@ -256,7 +254,7 @@ class DatabaseInspector
                     ORDER BY array_position(i.indkey, a.attnum)
                 ', [$table]))->pluck('attname')->toArray(),
 
-                'sqlite' => collect($this->connection->select("PRAGMA table_info(`{$table}`)"))
+                'sqlite' => collect($this->connection->select(sprintf('PRAGMA table_info(`%s`)', $table)))
                     ->where('pk', '>', 0)
                     ->sortBy('pk')
                     ->pluck('name')
@@ -272,9 +270,7 @@ class DatabaseInspector
 
                 default => [],
             };
-
-            return $columns;
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return [];
         }
     }
@@ -314,7 +310,7 @@ class DatabaseInspector
                 AND tc.table_name = ?
             ", [$table]),
 
-            'sqlite' => collect($this->connection->select("PRAGMA foreign_key_list(`{$table}`)"))
+            'sqlite' => collect($this->connection->select(sprintf('PRAGMA foreign_key_list(`%s`)', $table)))
                 ->map(fn ($fk) => (object) [
                     'column_name' => $fk->from,
                     'referenced_table_name' => $fk->table,
@@ -344,7 +340,7 @@ class DatabaseInspector
             default => [],
         };
 
-        return array_map(fn ($fk) => [
+        return array_map(fn ($fk): array => [
             'column' => $fk->column_name,
             'referenced_table' => $fk->referenced_table_name,
             'referenced_column' => $fk->referenced_column_name,
@@ -357,15 +353,13 @@ class DatabaseInspector
      */
     public function getIndexes(string $table): array
     {
-        $indexes = match ($this->driver) {
+        return match ($this->driver) {
             'mysql' => $this->getMysqlIndexes($table),
             'pgsql' => $this->getPostgresIndexes($table),
             'sqlite' => $this->getSqliteIndexes($table),
             'sqlsrv' => $this->getSqlServerIndexes($table),
             default => [],
         };
-
-        return $indexes;
     }
 
     /**
@@ -373,7 +367,7 @@ class DatabaseInspector
      */
     protected function getMysqlIndexes(string $table): array
     {
-        $rawIndexes = $this->connection->select("SHOW INDEX FROM `{$table}`");
+        $rawIndexes = $this->connection->select(sprintf('SHOW INDEX FROM `%s`', $table));
 
         $grouped = [];
         foreach ($rawIndexes as $idx) {
@@ -420,14 +414,14 @@ class DatabaseInspector
         GROUP BY i.relname, ix.indisunique, ix.indisprimary, am.amname
     ', [$table]);
 
-        return array_map(function ($idx) {
+        return array_map(function ($idx): array {
             // Convert PostgreSQL array string to PHP array
             $columns = $idx->columns;
 
             // Handle PostgreSQL array format: {col1,col2,col3}
             if (is_string($columns)) {
                 $columns = trim($columns, '{}');
-                $columns = $columns ? explode(',', $columns) : [];
+                $columns = $columns !== '' && $columns !== '0' ? explode(',', $columns) : [];
             }
 
             // Ensure it's an array
@@ -437,10 +431,10 @@ class DatabaseInspector
 
             return [
                 'name' => $idx->index_name,
-                'columns' => array_map(fn ($col) => ['name' => $col, 'order' => 'ASC'], $columns),
+                'columns' => array_map(fn ($col): array => ['name' => $col, 'order' => 'ASC'], $columns),
                 'unique' => $idx->is_unique,
                 'primary' => $idx->is_primary,
-                'type' => strtoupper($idx->index_type),
+                'type' => strtoupper((string) $idx->index_type),
             ];
         }, $rawIndexes);
     }
@@ -450,13 +444,13 @@ class DatabaseInspector
      */
     protected function getSqliteIndexes(string $table): array
     {
-        $rawIndexes = $this->connection->select("PRAGMA index_list(`{$table}`)");
+        $rawIndexes = $this->connection->select(sprintf('PRAGMA index_list(`%s`)', $table));
 
         $indexes = [];
         foreach ($rawIndexes as $idx) {
-            $indexInfo = $this->connection->select("PRAGMA index_info(`{$idx->name}`)");
+            $indexInfo = $this->connection->select(sprintf('PRAGMA index_info(`%s`)', $idx->name));
 
-            $columns = array_map(fn ($col) => [
+            $columns = array_map(fn ($col): array => [
                 'name' => $col->name,
                 'order' => 'ASC',
             ], $indexInfo);
@@ -492,9 +486,9 @@ class DatabaseInspector
             GROUP BY i.name, i.is_unique, i.is_primary_key, i.type_desc
         ", [$table]);
 
-        return array_map(fn ($idx) => [
+        return array_map(fn ($idx): array => [
             'name' => $idx->index_name,
-            'columns' => array_map(fn ($col) => ['name' => $col, 'order' => 'ASC'], explode(',', $idx->columns)),
+            'columns' => array_map(fn ($col): array => ['name' => $col, 'order' => 'ASC'], explode(',', (string) $idx->columns)),
             'unique' => $idx->is_unique,
             'primary' => $idx->is_primary_key,
             'type' => $idx->type_desc,
@@ -508,7 +502,7 @@ class DatabaseInspector
     {
         $indexes = $this->getIndexes($table);
 
-        return array_filter($indexes, fn ($idx) => $idx['unique'] && ! $idx['primary']);
+        return array_filter($indexes, fn (array $idx): bool => $idx['unique'] && ! $idx['primary']);
     }
 
     /**
@@ -516,15 +510,13 @@ class DatabaseInspector
      */
     public function getCheckConstraints(string $table): array
     {
-        $constraints = match ($this->driver) {
+        return match ($this->driver) {
             'mysql' => $this->getMysqlCheckConstraints($table),
             'pgsql' => $this->getPostgresCheckConstraints($table),
             'sqlite' => [], // SQLite check constraints are harder to introspect
             'sqlsrv' => $this->getSqlServerCheckConstraints($table),
             default => [],
         };
-
-        return $constraints;
     }
 
     /**
@@ -542,11 +534,11 @@ class DatabaseInspector
                 AND TABLE_NAME = ?
             ', [$table]);
 
-            return array_map(fn ($c) => [
+            return array_map(fn ($c): array => [
                 'name' => $c->name,
                 'definition' => $c->definition,
             ], $constraints);
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return [];
         }
     }
@@ -566,7 +558,7 @@ class DatabaseInspector
             AND con.contype = 'c'
         ", [$table]);
 
-        return array_map(fn ($c) => [
+        return array_map(fn ($c): array => [
             'name' => $c->name,
             'definition' => $c->definition,
         ], $constraints);
@@ -586,7 +578,7 @@ class DatabaseInspector
             WHERE t.name = ?
         ', [$table]);
 
-        return array_map(fn ($c) => [
+        return array_map(fn ($c): array => [
             'name' => $c->name,
             'definition' => $c->definition,
         ], $constraints);
@@ -622,7 +614,7 @@ class DatabaseInspector
             };
 
             return $result->TABLE_COMMENT ?? $result->comment ?? null;
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return null;
         }
     }

@@ -10,13 +10,10 @@ class FileWriter
 
     protected string $basePath;
 
-    protected bool $dryRun;
-
-    public function __construct(?string $basePath = null, bool $dryRun = false)
+    public function __construct(?string $basePath = null, protected bool $dryRun = false)
     {
         $this->files = new Filesystem;
         $this->basePath = $basePath ?? base_path();
-        $this->dryRun = $dryRun;
     }
 
     /**
@@ -51,11 +48,7 @@ class FileWriter
         $result['written'] = $written !== false;
         $result['bytes'] = $written;
 
-        if ($result['existed']) {
-            $result['message'] = 'Model overwritten';
-        } else {
-            $result['message'] = 'Model created';
-        }
+        $result['message'] = $result['existed'] ? 'Model overwritten' : 'Model created';
 
         return $result;
     }

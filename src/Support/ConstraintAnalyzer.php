@@ -4,13 +4,10 @@ namespace Zuqongtech\LaravelDbIntrospection\Support;
 
 class ConstraintAnalyzer
 {
-    protected DatabaseInspector $inspector;
-
     protected array $tableCache = [];
 
-    public function __construct(DatabaseInspector $inspector)
+    public function __construct(protected DatabaseInspector $inspector)
     {
-        $this->inspector = $inspector;
     }
 
     /**
@@ -65,7 +62,7 @@ class ConstraintAnalyzer
                                                  str_contains(strtolower($pkColumn['extra'] ?? ''), 'serial');
 
                 // Check if UUID type
-                $type = strtolower($pkColumn['type']);
+                $type = strtolower((string) $pkColumn['type']);
                 $analysis['is_uuid'] = str_contains($type, 'uuid') ||
                                       str_contains($type, 'char(36)') ||
                                       str_contains($type, 'varchar(36)');
@@ -82,19 +79,17 @@ class ConstraintAnalyzer
     {
         $foreignKeys = $metadata['foreign_keys'];
 
-        return array_map(function ($fk) use ($metadata) {
-            return [
-                'column' => $fk['column'],
-                'references' => [
-                    'table' => $fk['referenced_table'],
-                    'column' => $fk['referenced_column'],
-                ],
-                'constraint_name' => $fk['constraint_name'],
-                'is_nullable' => $this->isColumnNullable($metadata['columns'], $fk['column']),
-                'has_index' => $this->hasIndexOnColumn($metadata['indexes'], $fk['column']),
-                'relationship_type' => $this->determineRelationshipType($fk, $metadata),
-            ];
-        }, $foreignKeys);
+        return array_map(fn(array $fk) => [
+            'column' => $fk['column'],
+            'references' => [
+                'table' => $fk['referenced_table'],
+                'column' => $fk['referenced_column'],
+            ],
+            'constraint_name' => $fk['constraint_name'],
+            'is_nullable' => $this->isColumnNullable($metadata['columns'], $fk['column']),
+            'has_index' => $this->hasIndexOnColumn($metadata['indexes'], $fk['column']),
+            'relationship_type' => $this->determineRelationshipType($fk, $metadata),
+        ], $foreignKeys);
     }
 
     /**
@@ -104,18 +99,18 @@ class ConstraintAnalyzer
     {
         $indexes = $metadata['indexes'];
 
-        return array_map(function ($idx) {
+        return array_map(function (array $idx): array {
             $columnCount = count($idx['columns']);
 
             return [
                 'name' => $idx['name'],
-                'columns' => array_map(fn ($col) => $col['name'], $idx['columns']),
+                'columns' => array_map(fn (array $col) => $col['name'], $idx['columns']),
                 'column_count' => $columnCount,
                 'is_composite' => $columnCount > 1,
                 'is_unique' => $idx['unique'],
                 'is_primary' => $idx['primary'],
                 'type' => $idx['type'],
-                'column_order' => array_map(fn ($col) => [
+                'column_order' => array_map(fn (array $col): array => [
                     'column' => $col['name'],
                     'order' => $col['order'] ?? 'ASC',
                 ], $idx['columns']),
@@ -130,8 +125,8 @@ class ConstraintAnalyzer
     {
         $uniqueConstraints = $metadata['unique_constraints'];
 
-        return array_map(function ($constraint) use ($metadata) {
-            $columns = array_map(fn ($col) => $col['name'], $constraint['columns']);
+        return array_map(function (array $constraint) use ($metadata): array {
+            $columns = array_map(fn (array $col) => $col['name'], $constraint['columns']);
 
             return [
                 'name' => $constraint['name'],
@@ -173,7 +168,7 @@ class ConstraintAnalyzer
     protected function hasIndexOnColumn(array $indexes, string $columnName): bool
     {
         foreach ($indexes as $index) {
-            $indexColumns = array_map(fn ($col) => $col['name'], $index['columns']);
+            $indexColumns = array_map(fn (array $col) => $col['name'], $index['columns']);
             if (in_array($columnName, $indexColumns)) {
                 return true;
             }
@@ -192,7 +187,7 @@ class ConstraintAnalyzer
         // Check if foreign key is unique (one-to-one)
         foreach ($metadata['indexes'] as $index) {
             if ($index['unique']) {
-                $indexColumns = array_map(fn ($col) => $col['name'], $index['columns']);
+                $indexColumns = array_map(fn (array $col) => $col['name'], $index['columns']);
                 if (count($indexColumns) === 1 && $indexColumns[0] === $column) {
                     return 'one-to-one';
                 }
@@ -237,8 +232,8 @@ class ConstraintAnalyzer
                 $recommendations[] = [
                     'type' => 'performance',
                     'category' => 'index',
-                    'message' => "Foreign key column '{$fk['column']}' lacks an index",
-                    'suggestion' => "Add an index on '{$fk['column']}' for better query performance",
+                    'message' => sprintf("Foreign key column '%s' lacks an index", $fk['column']),
+                    'suggestion' => sprintf("Add an index on '%s' for better query performance", $fk['column']),
                 ];
             }
         }
@@ -255,7 +250,7 @@ class ConstraintAnalyzer
                 $recommendations[] = [
                     'type' => 'info',
                     'category' => 'nullable_fk',
-                    'message' => "Foreign key '{$fk['column']}' is nullable",
+                    'message' => sprintf("Foreign key '%s' is nullable", $fk['column']),
                     'suggestion' => 'Ensure this is intentional for optional relationships',
                 ];
             }
@@ -277,15 +272,15 @@ class ConstraintAnalyzer
                 $idx1 = $indexes[$i];
                 $idx2 = $indexes[$j];
 
-                $cols1 = array_map(fn ($col) => $col['name'], $idx1['columns']);
-                $cols2 = array_map(fn ($col) => $col['name'], $idx2['columns']);
+                $cols1 = array_map(fn (array $col) => $col['name'], $idx1['columns']);
+                $cols2 = array_map(fn (array $col) => $col['name'], $idx2['columns']);
 
                 // Check if one index is a prefix of another
                 if ($this->isIndexPrefix($cols1, $cols2)) {
                     $recommendations[] = [
                         'type' => 'optimization',
                         'category' => 'redundant_index',
-                        'message' => "Index '{$idx1['name']}' may be redundant with '{$idx2['name']}'",
+                        'message' => sprintf("Index '%s' may be redundant with '%s'", $idx1['name'], $idx2['name']),
                         'suggestion' => 'Consider removing the shorter index if the longer one serves both purposes',
                     ];
                 }
@@ -306,8 +301,9 @@ class ConstraintAnalyzer
         if (count($shorter) === count($longer)) {
             return false;
         }
+        $counter = count($shorter);
 
-        for ($i = 0; $i < count($shorter); $i++) {
+        for ($i = 0; $i < $counter; $i++) {
             if ($shorter[$i] !== $longer[$i]) {
                 return false;
             }
@@ -372,7 +368,7 @@ class ConstraintAnalyzer
                         'type' => 'missing_referenced_table',
                         'foreign_key' => $fk['column'],
                         'referenced_table' => $fk['referenced_table'],
-                        'message' => "Foreign key references non-existent table '{$fk['referenced_table']}'",
+                        'message' => sprintf("Foreign key references non-existent table '%s'", $fk['referenced_table']),
                     ];
                 }
 
@@ -388,7 +384,7 @@ class ConstraintAnalyzer
                             'foreign_key' => $fk['column'],
                             'referenced_table' => $fk['referenced_table'],
                             'referenced_column' => $fk['referenced_column'],
-                            'message' => "Foreign key references non-existent column '{$fk['referenced_column']}' in table '{$fk['referenced_table']}'",
+                            'message' => sprintf("Foreign key references non-existent column '%s' in table '%s'", $fk['referenced_column'], $fk['referenced_table']),
                         ];
                     }
                 }

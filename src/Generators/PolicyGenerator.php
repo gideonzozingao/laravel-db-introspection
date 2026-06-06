@@ -21,7 +21,7 @@ final class PolicyGenerator implements Generator
     public function generate(ModelMetadata $meta, GenerationOptions $options): array
     {
         $policyName = $meta->model.'Policy';
-        $path = app_path("Policies/{$policyName}.php");
+        $path = app_path(sprintf('Policies/%s.php', $policyName));
 
         if (file_exists($path) && ! $options->force) {
             return [
@@ -40,6 +40,7 @@ final class PolicyGenerator implements Generator
             if (! is_dir($dir)) {
                 mkdir($dir, 0755, true);
             }
+
             file_put_contents($path, $content);
         }
 
@@ -51,7 +52,7 @@ final class PolicyGenerator implements Generator
         ];
     }
 
-    protected function buildPolicy(ModelMetadata $meta, string $namespace): string
+    private function buildPolicy(ModelMetadata $meta, string $namespace): string
     {
         $policyName = $meta->model.'Policy';
         $modelClass = $meta->model;
@@ -61,7 +62,7 @@ final class PolicyGenerator implements Generator
         // Check if user_id column exists for ownership logic
         $hasUserOwnership = collect($meta->columns)->contains('name', 'user_id');
         $ownershipCheck = $hasUserOwnership
-            ? "return \$user->id === \${$modelVariable}->user_id;"
+            ? sprintf('return $user->id === $%s->user_id;', $modelVariable)
             : 'return true;';
 
         return <<<PHP

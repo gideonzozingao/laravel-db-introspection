@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
 
     /*
@@ -39,7 +41,7 @@ return [
     |
     */
 
-    'connection' => env('DB_INTROSPECTION_CONNECTION', null),
+    'connection' => env('DB_INTROSPECTION_CONNECTION'),
 
     /*
     |--------------------------------------------------------------------------
@@ -214,7 +216,7 @@ return [
     |
     */
 
-    'date_format' => env('DB_INTROSPECTION_DATE_FORMAT', null),
+    'date_format' => env('DB_INTROSPECTION_DATE_FORMAT'),
 
     /*
     |--------------------------------------------------------------------------
@@ -227,7 +229,7 @@ return [
     |
     */
 
-    'template_path' => env('DB_INTROSPECTION_TEMPLATE', null),
+    'template_path' => env('DB_INTROSPECTION_TEMPLATE'),
 
     /*
     |--------------------------------------------------------------------------
@@ -239,7 +241,7 @@ return [
     |
     */
 
-    'base_model_class' => env('DB_INTROSPECTION_BASE_MODEL', 'Illuminate\\Database\\Eloquent\\Model'),
+    'base_model_class' => env('DB_INTROSPECTION_BASE_MODEL', \Illuminate\Database\Eloquent\Model::class),
 
     /*
     |--------------------------------------------------------------------------
@@ -430,7 +432,7 @@ return [
         'parallel_processing' => env('DB_INTROSPECTION_PARALLEL', false),
 
         // Number of parallel workers (null = auto-detect)
-        'parallel_workers' => env('DB_INTROSPECTION_WORKERS', null),
+        'parallel_workers' => env('DB_INTROSPECTION_WORKERS'),
 
         // Batch size for processing large table lists
         'batch_size' => 50,
