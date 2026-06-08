@@ -3,7 +3,6 @@
     "description": "A Laravel package for automatic database introspection and model generation supporting MySQL, PostgreSQL, SQL Server, and more.",
     "type": "library",
     "license": "MIT",
-    "version": "1.0.2",
     "authors": [
         {
             "name": "Gideon Zozingao",
