@@ -4,9 +4,7 @@ namespace Zuqongtech\LaravelDbIntrospection\Support;
 
 class StubGenerator
 {
-    public function __construct(protected array $replacements = [])
-    {
-    }
+    public function __construct(protected array $replacements = []) {}
 
     /**
      * Add a replacement
@@ -127,22 +125,22 @@ STUB;
         $innerIndent = str_repeat('    ', $indent + 1);
 
         $stub = "\n{$indentation}/**\n";
-        $stub .= $indentation . ' * The attributes that are mass assignable.
+        $stub .= $indentation.' * The attributes that are mass assignable.
 ';
-        $stub .= $indentation . ' *
+        $stub .= $indentation.' *
 ';
-        $stub .= $indentation . ' * @var array<int, string>
+        $stub .= $indentation.' * @var array<int, string>
 ';
-        $stub .= $indentation . ' */
+        $stub .= $indentation.' */
 ';
-        $stub .= $indentation . 'protected $fillable = [
+        $stub .= $indentation.'protected $fillable = [
 ';
 
         foreach ($columns as $column) {
             $stub .= "{$innerIndent}'{$column}',\n";
         }
 
-        return $stub . ($indentation . '];');
+        return $stub.($indentation.'];');
     }
 
     /**
@@ -158,22 +156,22 @@ STUB;
         $innerIndent = str_repeat('    ', $indent + 1);
 
         $stub = "\n{$indentation}/**\n";
-        $stub .= $indentation . ' * The attributes that should be hidden for serialization.
+        $stub .= $indentation.' * The attributes that should be hidden for serialization.
 ';
-        $stub .= $indentation . ' *
+        $stub .= $indentation.' *
 ';
-        $stub .= $indentation . ' * @var array<int, string>
+        $stub .= $indentation.' * @var array<int, string>
 ';
-        $stub .= $indentation . ' */
+        $stub .= $indentation.' */
 ';
-        $stub .= $indentation . 'protected $hidden = [
+        $stub .= $indentation.'protected $hidden = [
 ';
 
         foreach ($columns as $column) {
             $stub .= "{$innerIndent}'{$column}',\n";
         }
 
-        return $stub . ($indentation . '];');
+        return $stub.($indentation.'];');
     }
 
     /**
@@ -189,22 +187,22 @@ STUB;
         $innerIndent = str_repeat('    ', $indent + 1);
 
         $stub = "\n{$indentation}/**\n";
-        $stub .= $indentation . ' * The attributes that should be cast.
+        $stub .= $indentation.' * The attributes that should be cast.
 ';
-        $stub .= $indentation . ' *
+        $stub .= $indentation.' *
 ';
-        $stub .= $indentation . ' * @var array<string, string>
+        $stub .= $indentation.' * @var array<string, string>
 ';
-        $stub .= $indentation . ' */
+        $stub .= $indentation.' */
 ';
-        $stub .= $indentation . 'protected $casts = [
+        $stub .= $indentation.'protected $casts = [
 ';
 
         foreach ($casts as $column => $cast) {
             $stub .= "{$innerIndent}'{$column}' => '{$cast}',\n";
         }
 
-        return $stub . ($indentation . '];');
+        return $stub.($indentation.'];');
     }
 
     /**
@@ -220,22 +218,22 @@ STUB;
         $innerIndent = str_repeat('    ', $indent + 1);
 
         $stub = "\n{$indentation}/**\n";
-        $stub .= $indentation . ' * The attributes that should be mutated to dates.
+        $stub .= $indentation.' * The attributes that should be mutated to dates.
 ';
-        $stub .= $indentation . ' *
+        $stub .= $indentation.' *
 ';
-        $stub .= $indentation . ' * @var array<int, string>
+        $stub .= $indentation.' * @var array<int, string>
 ';
-        $stub .= $indentation . ' */
+        $stub .= $indentation.' */
 ';
-        $stub .= $indentation . 'protected $dates = [
+        $stub .= $indentation.'protected $dates = [
 ';
 
         foreach ($dates as $date) {
             $stub .= "{$innerIndent}'{$date}',\n";
         }
 
-        return $stub . ($indentation . '];');
+        return $stub.($indentation.'];');
     }
 
     /**
@@ -294,13 +292,13 @@ STUB;
         $indentation = str_repeat('    ', $indent);
 
         return "\n{$indentation}/**\n".
-               ($indentation . ' * The primary key for the model.
+               ($indentation.' * The primary key for the model.
 ').
-               ($indentation . ' *
+               ($indentation.' *
 ').
-               ($indentation . ' * @var string
+               ($indentation.' * @var string
 ').
-               ($indentation . ' */
+               ($indentation.' */
 ').
                sprintf("%sprotected \$primaryKey = '%s';", $indentation, $primaryKey);
     }
@@ -317,15 +315,15 @@ STUB;
         $indentation = str_repeat('    ', $indent);
 
         return "\n{$indentation}/**\n".
-               ($indentation . ' * Indicates if the model should be timestamped.
+               ($indentation.' * Indicates if the model should be timestamped.
 ').
-               ($indentation . ' *
+               ($indentation.' *
 ').
-               ($indentation . ' * @var bool
+               ($indentation.' * @var bool
 ').
-               ($indentation . ' */
+               ($indentation.' */
 ').
-               ($indentation . 'public $timestamps = false;');
+               ($indentation.'public $timestamps = false;');
     }
 
     /**

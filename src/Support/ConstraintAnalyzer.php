@@ -6,9 +6,7 @@ class ConstraintAnalyzer
 {
     protected array $tableCache = [];
 
-    public function __construct(protected DatabaseInspector $inspector)
-    {
-    }
+    public function __construct(protected DatabaseInspector $inspector) {}
 
     /**
      * Analyze all constraints for a table
@@ -79,7 +77,7 @@ class ConstraintAnalyzer
     {
         $foreignKeys = $metadata['foreign_keys'];
 
-        return array_map(fn(array $fk) => [
+        return array_map(fn (array $fk): array => [
             'column' => $fk['column'],
             'references' => [
                 'table' => $fk['referenced_table'],
@@ -301,6 +299,7 @@ class ConstraintAnalyzer
         if (count($shorter) === count($longer)) {
             return false;
         }
+
         $counter = count($shorter);
 
         for ($i = 0; $i < $counter; $i++) {

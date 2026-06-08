@@ -386,7 +386,7 @@ final class GenerationOptions implements \Stringable
         if ($this->path) {
             $fullPath = base_path($this->path);
             if (! is_dir($fullPath) && ! @mkdir($fullPath, 0755, true)) {
-                $errors[] = 'Path does not exist and cannot be created: ' . $this->path;
+                $errors[] = 'Path does not exist and cannot be created: '.$this->path;
             }
         }
 

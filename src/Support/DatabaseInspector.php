@@ -68,7 +68,7 @@ class DatabaseInspector
                 ORDER BY TABLE_NAME
             "))->pluck('TABLE_NAME')->toArray(),
 
-            default => throw new \Exception('Unsupported database driver: ' . $this->driver)
+            default => throw new \Exception('Unsupported database driver: '.$this->driver)
         };
 
         return array_values($tables);

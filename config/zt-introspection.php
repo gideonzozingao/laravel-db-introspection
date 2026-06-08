@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Illuminate\Database\Eloquent\Model;
 
 return [
 
@@ -241,7 +242,7 @@ return [
     |
     */
 
-    'base_model_class' => env('DB_INTROSPECTION_BASE_MODEL', \Illuminate\Database\Eloquent\Model::class),
+    'base_model_class' => env('DB_INTROSPECTION_BASE_MODEL', Model::class),
 
     /*
     |--------------------------------------------------------------------------

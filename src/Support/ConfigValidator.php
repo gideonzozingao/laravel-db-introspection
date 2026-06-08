@@ -85,7 +85,7 @@ class ConfigValidator
         // Check if path is writable
         $fullPath = base_path($path);
         if (! is_dir($fullPath) && ! @mkdir($fullPath, 0755, true)) {
-            $this->addWarning('target_path', 'Target path is not writable: ' . $path);
+            $this->addWarning('target_path', 'Target path is not writable: '.$path);
         }
     }
 
@@ -142,7 +142,7 @@ class ConfigValidator
 
             // Test if pattern is valid regex
             if (@preg_match($pattern, '') === false) {
-                $this->addError('ignore_table_patterns', 'Invalid regex pattern: ' . $pattern);
+                $this->addError('ignore_table_patterns', 'Invalid regex pattern: '.$pattern);
             }
         }
     }
@@ -173,7 +173,7 @@ class ConfigValidator
         foreach ($booleanOptions as $option) {
             $value = $relationships[$option] ?? null;
             if ($value !== null && ! is_bool($value)) {
-                $this->addError('relationships.' . $option, 'Must be a boolean value');
+                $this->addError('relationships.'.$option, 'Must be a boolean value');
             }
         }
 
@@ -213,7 +213,7 @@ class ConfigValidator
             }
 
             if (! Helpers::isValidClassName($model)) {
-                $this->addError('naming.custom_model_names', 'Invalid model class name: ' . $model);
+                $this->addError('naming.custom_model_names', 'Invalid model class name: '.$model);
             }
         }
     }
@@ -251,7 +251,7 @@ class ConfigValidator
             $validVisibilities = ['public', 'protected', 'private'];
             foreach ($visibilityOrder as $visibility) {
                 if (! in_array($visibility, $validVisibilities)) {
-                    $this->addError('code_style.property_visibility_order', 'Invalid visibility: ' . $visibility);
+                    $this->addError('code_style.property_visibility_order', 'Invalid visibility: '.$visibility);
                 }
             }
         }
@@ -385,7 +385,7 @@ class ConfigValidator
             $logDir = dirname($logPath);
 
             if (! is_dir($logDir) && ! @mkdir($logDir, 0755, true)) {
-                $this->addWarning('output.log_file', 'Log directory is not writable: ' . $logDir);
+                $this->addWarning('output.log_file', 'Log directory is not writable: '.$logDir);
             }
         }
     }
@@ -413,7 +413,7 @@ class ConfigValidator
             }
 
             if (! in_array($phpType, $validPhpTypes, true)) {
-                $this->addWarning('type_mappings', 'Unusual PHP type: ' . $phpType);
+                $this->addWarning('type_mappings', 'Unusual PHP type: '.$phpType);
             }
         }
 
@@ -451,13 +451,13 @@ class ConfigValidator
 
             if ($hook !== null) {
                 if (! is_string($hook)) {
-                    $this->addError('hooks.' . $hookName, 'Hook must be a string (class name) or null');
+                    $this->addError('hooks.'.$hookName, 'Hook must be a string (class name) or null');
 
                     continue;
                 }
 
                 if (! class_exists($hook)) {
-                    $this->addError('hooks.' . $hookName, 'Hook class does not exist: ' . $hook);
+                    $this->addError('hooks.'.$hookName, 'Hook class does not exist: '.$hook);
                 }
             }
         }
@@ -543,7 +543,7 @@ class ConfigValidator
         if (! $this->validate()) {
             $messages = implode("\n", $this->getFormattedErrors());
             throw new \InvalidArgumentException('Configuration validation failed:
-' . $messages);
+'.$messages);
         }
     }
 

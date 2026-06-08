@@ -8,9 +8,7 @@ class RelationshipDetector
 
     protected array $foreignKeyMap = [];
 
-    public function __construct(protected DatabaseInspector $inspector)
-    {
-    }
+    public function __construct(protected DatabaseInspector $inspector) {}
 
     /**
      * Build foreign key map for all tables

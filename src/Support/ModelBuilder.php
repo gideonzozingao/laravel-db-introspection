@@ -2,6 +2,8 @@
 
 namespace Zuqongtech\LaravelDbIntrospection\Support;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class ModelBuilder
 {
     protected string $namespace;
@@ -215,7 +217,7 @@ class ModelBuilder
         $uses = [];
 
         if ($this->softDeletes) {
-            $uses[] = \Illuminate\Database\Eloquent\SoftDeletes::class;
+            $uses[] = SoftDeletes::class;
         }
 
         return StubGenerator::usesStub($uses);
@@ -234,7 +236,7 @@ class ModelBuilder
             $properties[] = [
                 'type' => '',
                 'name' => '',
-                'comment' => 'Table: ' . $this->tableName,
+                'comment' => 'Table: '.$this->tableName,
             ];
         }
 
@@ -268,7 +270,7 @@ class ModelBuilder
             $methods[] = [
                 'return' => sprintf('\%s\%s', $this->namespace, $relatedModel),
                 'name' => $methodName,
-                'comment' => 'Get the related ' . $relatedModel,
+                'comment' => 'Get the related '.$relatedModel,
             ];
         }
 
@@ -337,36 +339,36 @@ class ModelBuilder
             $innerIndent = '        ';
 
             $stub = "\n{$indent}/**\n";
-            $stub .= $indent . ' * The primary key for the model.
+            $stub .= $indent.' * The primary key for the model.
 ';
-            $stub .= $indent . ' *
+            $stub .= $indent.' *
 ';
-            $stub .= $indent . ' * @var array<int, string>
+            $stub .= $indent.' * @var array<int, string>
 ';
-            $stub .= $indent . ' */
+            $stub .= $indent.' */
 ';
-            $stub .= $indent . 'protected $primaryKey = [
+            $stub .= $indent.'protected $primaryKey = [
 ';
 
             foreach ($this->compositePrimaryKey as $column) {
                 $stub .= "{$innerIndent}'{$column}',\n";
             }
 
-            $stub .= $indent . '];
+            $stub .= $indent.'];
 
 ';
-            $stub .= $indent . '/**
+            $stub .= $indent.'/**
 ';
-            $stub .= $indent . ' * Indicates if the IDs are auto-incrementing.
+            $stub .= $indent.' * Indicates if the IDs are auto-incrementing.
 ';
-            $stub .= $indent . ' *
+            $stub .= $indent.' *
 ';
-            $stub .= $indent . ' * @var bool
+            $stub .= $indent.' * @var bool
 ';
-            $stub .= $indent . ' */
+            $stub .= $indent.' */
 ';
 
-            return $stub . ($indent . 'public $incrementing = false;');
+            return $stub.($indent.'public $incrementing = false;');
         }
 
         return StubGenerator::primaryKeyStub($this->primaryKey);
@@ -385,12 +387,15 @@ class ModelBuilder
             if (in_array($columnName, $this->compositePrimaryKey)) {
                 continue;
             }
+
             if ($columnName === $this->primaryKey) {
                 continue;
             }
+
             if (Helpers::isTimestampColumn($columnName)) {
                 continue;
             }
+
             if (str_contains((string) $column['extra'], 'auto_increment')) {
                 continue;
             }
@@ -505,14 +510,14 @@ class ModelBuilder
         }
 
         $stub = "\n{$indent}/*\n";
-        $stub .= $indent . ' * Database Constraints
+        $stub .= $indent.' * Database Constraints
 ';
-        $stub .= $indent . ' * '.str_repeat('-', 50)."\n";
+        $stub .= $indent.' * '.str_repeat('-', 50)."\n";
         foreach ($comments as $comment) {
             $stub .= sprintf('%s * %s%s', $indent, $comment, PHP_EOL);
         }
 
-        return $stub . ($indent . ' */
+        return $stub.($indent.' */
 ');
     }
 

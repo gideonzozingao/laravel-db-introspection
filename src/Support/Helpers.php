@@ -186,7 +186,7 @@ class Helpers
             }
         }
 
-        return $formatted . ($indentation . ' */');
+        return $formatted.($indentation.' */');
     }
 
     /**
@@ -201,7 +201,7 @@ class Helpers
             $lines[] = '';
         }
 
-        $lines[] = '@var ' . $type;
+        $lines[] = '@var '.$type;
 
         return self::formatDocBlock($lines);
     }
@@ -212,7 +212,7 @@ class Helpers
     public static function generateRelationshipDoc(string $relationType, string $relatedModel): string
     {
         $lines = [
-            '@return \Illuminate\Database\Eloquent\Relations\\' . $relationType,
+            '@return \Illuminate\Database\Eloquent\Relations\\'.$relationType,
         ];
 
         return self::formatDocBlock($lines);
@@ -336,12 +336,12 @@ class Helpers
             } elseif (is_array($value)) {
                 $formatted .= self::formatArray($value, $indent + 1).",\n";
             } else {
-                $formatted .= $value . ',
+                $formatted .= $value.',
 ';
             }
         }
 
-        return $formatted . ($indentation . ']');
+        return $formatted.($indentation.']');
     }
 
     /**

@@ -3,6 +3,18 @@
     "description": "A Laravel package for automatic database introspection and model generation supporting MySQL, PostgreSQL, SQL Server, and more.",
     "type": "library",
     "license": "MIT",
+    "keywords": [
+        "laravel",
+        "database",
+        "introspection",
+        "model",
+        "generator"
+    ],
+    "homepage": "https://github.com/zuqongtech/laravel-db-introspection",
+    "support": {
+        "issues": "https://github.com/zuqongtech/laravel-db-introspection/issues",
+        "source": "https://github.com/zuqongtech/laravel-db-introspection"
+    },
     "authors": [
         {
             "name": "Gideon Zozingao",
@@ -11,14 +23,14 @@
     ],
     "require": {
         "php": "^8.2",
-        "illuminate/support": "^11.0|^12.0",
-        "illuminate/database": "^11.0|^12.0",
-        "illuminate/console": "^11.0|^12.0",
-        "illuminate/filesystem": "^11.0|^12.0"
+        "illuminate/support": "^11.0|^12.0|^13.0",
+        "illuminate/database": "^11.0|^12.0|^13.0",
+        "illuminate/console": "^11.0|^12.0|^13.0",
+        "illuminate/filesystem": "^11.0|^12.0|^13"
     },
     "require-dev": {
-        "orchestra/testbench": "^9.0",
-        "phpunit/phpunit": "^11.0",
+        "orchestra/testbench": "^9.0|^10.0",
+        "phpunit/phpunit": "^11.0|^12.0",
         "laravel/pint": "^1.27",
         "driftingly/rector-laravel": "^2.5",
         "rector/rector": "^2.4"
@@ -40,9 +52,13 @@
             ]
         }
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true,
     "scripts": {
-        "test": "vendor/bin/phpunit"
+        "test": "vendor/bin/phpunit",
+        "lint": "vendor/bin/pint",
+        "lint:check": "vendor/bin/pint --test",
+        "refactor": "vendor/bin/rector",
+        "refactor:dry": "vendor/bin/rector --dry-run"
     }
 }
